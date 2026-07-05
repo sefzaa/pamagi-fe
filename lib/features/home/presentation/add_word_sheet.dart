@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pamagi/features/home/data/home_repository.dart';
 import 'package:pamagi/features/home/logic/home_cubit.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 
 class ExampleInput {
   TextEditingController sentence = TextEditingController();
@@ -17,6 +18,7 @@ class AddWordSheet extends StatefulWidget {
 }
 
 class _AddWordSheetState extends State<AddWordSheet> {
+  bool _isSubmitted = false;
   final wordController = TextEditingController();
   final translationController = TextEditingController();
 
@@ -35,46 +37,88 @@ class _AddWordSheetState extends State<AddWordSheet> {
     _loadCategories();
   }
 
+
   Future<void> _loadCategories() async {
-    final cats = await widget.repository.getCategories();
+    final cats = await widget.repository.getCategories(forDropdown: true);
     setState(() {
       categories = cats;
     });
   }
 
+// Desain Picker Icon Lucide sederhana
   Future<void> _addNewCategory() async {
     final catController = TextEditingController();
+    String selectedIcon = 'folder';
+
+    // Kelompok icon sederhana
+    final Map<String, IconData> iconList = {
+      'folder': LucideIcons.folder, 'book': LucideIcons.book, 'briefcase': LucideIcons.briefcase,
+      'coffee': LucideIcons.coffee, 'globe': LucideIcons.globe, 'heart': LucideIcons.heart,
+      'music': LucideIcons.music, 'shopping_cart': LucideIcons.shopping_cart, 'camera': LucideIcons.camera,
+      'utensils': LucideIcons.utensils, 'car': LucideIcons.car, 'plane': LucideIcons.plane,
+      'activity': LucideIcons.activity, 'alarm_clock': LucideIcons.alarm_clock, 'anchor': LucideIcons.anchor,
+      'apple': LucideIcons.apple, 'archive': LucideIcons.archive, 'award': LucideIcons.award,
+      'backpack': LucideIcons.backpack, 'battery': LucideIcons.battery, 'bell': LucideIcons.bell,
+      'cloud': LucideIcons.cloud, 'cpu': LucideIcons.cpu, 'database': LucideIcons.database,
+      'droplet': LucideIcons.droplet, 'feather': LucideIcons.feather, 'flag': LucideIcons.flag,
+      'gift': LucideIcons.gift, 'glasses': LucideIcons.glasses, 'headphones': LucideIcons.headphones,
+    };
+
     await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Add New Category', style: TextStyle(color: Color(0xFF00AA5B), fontSize: 18, fontWeight: FontWeight.bold)),
-        content: TextField(
-          controller: catController,
-          decoration: InputDecoration(
-            hintText: 'e.g. Kata Kerja A1',
-            focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF00AA5B))),
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel', style: TextStyle(color: Colors.grey))),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF00AA5B),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Add Category', style: TextStyle(color: Color(0xFF00AA5B), fontWeight: FontWeight.bold)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: catController,
+                  decoration: const InputDecoration(hintText: 'Category Name', focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF00AA5B)))),
+                ),
+                const SizedBox(height: 16),
+                const Align(alignment: Alignment.centerLeft, child: Text('Select Icon:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 12, runSpacing: 12,
+                  children: iconList.entries.map((entry) {
+                    final isSelected = selectedIcon == entry.key;
+                    return GestureDetector(
+                      onTap: () => setDialogState(() => selectedIcon = entry.key),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: isSelected ? const Color(0xFF00AA5B).withOpacity(0.2) : Colors.transparent,
+                          border: Border.all(color: isSelected ? const Color(0xFF00AA5B) : Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(entry.value, color: isSelected ? const Color(0xFF00AA5B) : Colors.grey),
+                      ),
+                    );
+                  }).toList(),
+                )
+              ],
             ),
-            onPressed: () async {
-              if (catController.text.isNotEmpty) {
-                Navigator.pop(context);
-                setState(() => isLoading = true);
-                await widget.repository.addCategory(catController.text);
-                await _loadCategories();
-                setState(() => isLoading = false);
-              }
-            },
-            child: const Text('Save', style: TextStyle(color: Colors.white)),
           ),
-        ],
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel', style: TextStyle(color: Colors.grey))),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00AA5B)),
+              onPressed: () async {
+                if (catController.text.isNotEmpty) {
+                  Navigator.pop(context);
+                  setState(() => isLoading = true);
+                  await widget.repository.addCategory(catController.text, selectedIcon);
+                  await _loadCategories();
+                  setState(() => isLoading = false);
+                }
+              },
+              child: const Text('Save', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -167,8 +211,9 @@ class _AddWordSheetState extends State<AddWordSheet> {
   }
 
   Future<void> _submitWord() async {
-    if (wordController.text.isEmpty || selectedPos == null || selectedCategoryIds.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lengkapi Word, Category & Part of Speech bro!')));
+    setState(() => _isSubmitted = true);
+    if (wordController.text.isEmpty || translationController.text.isEmpty || selectedPos == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Isi field yang wajib berwarna merah!')));
       return;
     }
 
@@ -228,10 +273,10 @@ class _AddWordSheetState extends State<AddWordSheet> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildLabel('Word / Phrase'),
-                    _buildTextField(wordController, 'e.g. ubiquitous'),
+                    _buildTextField(wordController, 'e.g. ubiquitous', isRequired: true),
 
                     _buildLabel('Translation / Meaning'),
-                    _buildTextField(translationController, 'e.g. present, appearing...'),
+                    _buildTextField(translationController, 'e.g. present, appearing...', isRequired: true),
 
                     _buildLabel('Category (Pilih 1 atau lebih)'),
                     GestureDetector(
@@ -366,15 +411,20 @@ class _AddWordSheetState extends State<AddWordSheet> {
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String hint, {int maxLines = 1}) {
+  Widget _buildTextField(TextEditingController controller, String hint, {int maxLines = 1, bool isRequired = false}) {
+    final hasError = _isSubmitted && isRequired && controller.text.isEmpty;
     return TextField(
       controller: controller,
       maxLines: maxLines,
+      onChanged: (_) => setState((){}), // Agar UI error hilang saat ngetik
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: Colors.grey),
+        hintStyle: TextStyle(color: hasError ? Colors.red.shade200 : Colors.grey),
+        filled: hasError,
+        fillColor: Colors.red.withOpacity(0.05),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade400)),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: hasError ? Colors.red : Colors.grey.shade400)),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: hasError ? Colors.red : Colors.grey.shade400)),
         focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFF00AA5B), width: 1.5)),
       ),
     );

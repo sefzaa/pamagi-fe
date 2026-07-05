@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pamagi/features/home/presentation/dashboard_screen.dart';
 import 'package:pamagi/features/home/presentation/add_word_sheet.dart'; // Import form baru
 import 'package:pamagi/features/home/logic/home_cubit.dart'; // Import ini untuk akses repository
+import 'package:pamagi/features/home/presentation/word_list_screen.dart';
 
 class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
@@ -31,8 +32,19 @@ class _MainLayoutState extends State<MainLayout> {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.favorite, color: Color(0xFF00AA5B)), // Icon Love
-          onPressed: () {},
+          icon: const Icon(Icons.favorite, color: Colors.red), // Icon Love
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => WordListScreen(
+                  repository: context.read<HomeCubit>().repository,
+                  title: 'Favorite Words',
+                  isFavorite: true,
+                ),
+              ),
+            );
+          },
         ),
         title: const Text('PAMAGI', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF00AA5B), letterSpacing: 1.5)),
         centerTitle: true,
