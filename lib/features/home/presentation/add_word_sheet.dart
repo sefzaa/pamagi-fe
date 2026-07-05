@@ -11,7 +11,8 @@ class ExampleInput {
 
 class AddWordSheet extends StatefulWidget {
   final HomeRepository repository;
-  const AddWordSheet({super.key, required this.repository});
+  final Map<String, dynamic>? initialWord; // Tambahan parameter
+  const AddWordSheet({super.key, required this.repository, this.initialWord});
 
   @override
   State<AddWordSheet> createState() => _AddWordSheetState();
@@ -35,6 +36,31 @@ class _AddWordSheetState extends State<AddWordSheet> {
   void initState() {
     super.initState();
     _loadCategories();
+
+    // JIKA MODE EDIT (initialWord tidak kosong), ISI SEMUA FIELD
+    if (widget.initialWord != null) {
+      final word = widget.initialWord!;
+      wordController.text = word['russian_word'] ?? '';
+      translationController.text = word['translation'] ?? '';
+      selectedPos = word['part_of_speech'];
+
+      // Mengisi kategori yang sudah dipilih sebelumnya
+      if (word['categories'] != null) {
+        selectedCategoryIds = (word['categories'] as List).map((c) => c['id'].toString()).toList();
+      }
+
+      // Mengisi contoh kalimat
+      if (word['examples'] != null && (word['examples'] as List).isNotEmpty) {
+        examples.clear();
+        for (var ex in word['examples']) {
+          final exampleInput = ExampleInput();
+          exampleInput.sentence.text = ex['russian_sentence'] ?? '';
+          exampleInput.translation.text = ex['translated_sentence'] ?? '';
+          examples.add(exampleInput);
+        }
+      }
+    }
+
   }
 
 
@@ -230,12 +256,19 @@ class _AddWordSheetState extends State<AddWordSheet> {
         "translation": translationController.text
       };
 
-      await widget.repository.addWord(body);
+      if (widget.initialWord != null) {
+        await widget.repository.updateWord(widget.initialWord!['id'], body);
+      } else {
+        await widget.repository.addWord(body);
+      }
 
+      // HANYA GUNAKAN SATU BLOK INI SAJA (HAPUS YANG SATUNYA LAGI)
       if (mounted) {
         context.read<HomeCubit>().fetchDashboardData();
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Kosakata berhasil ditambahkan!', style: TextStyle(color: Colors.white)), backgroundColor: Color(0xFF00AA5B)));
+        Navigator.pop(context, true); // Kirim flag 'true' ke halaman sebelumnya tanda sukses
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(widget.initialWord != null ? 'Kosakata berhasil diupdate!' : 'Kosakata berhasil ditambahkan!', style: const TextStyle(color: Colors.white)),
+            backgroundColor: const Color(0xFF00AA5B)));
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: Colors.red));
@@ -260,7 +293,8 @@ class _AddWordSheetState extends State<AddWordSheet> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
-                const Text('Add Vocabulary', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF00AA5B))),
+                // UBAH BARIS INI
+                Text(widget.initialWord != null ? 'Edit Vocabulary' : 'Add Vocabulary', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF00AA5B))),
                 const SizedBox(width: 48),
               ],
             ),

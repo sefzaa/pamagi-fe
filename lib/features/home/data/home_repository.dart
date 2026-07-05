@@ -30,13 +30,25 @@ class HomeRepository {
     String? categoryId,
     String? pos,
     bool? isFavorite,
+    bool? isBookmarked,
+    String? startDate,
+    String? endDate,
     String? sortBy,
+    int page = 1,
+    int limit = 20,
   }) async {
     try {
-      final queryParams = <String, dynamic>{};
-      if (categoryId != null) queryParams['category_id'] = categoryId;
-      if (pos != null) queryParams['part_of_speech'] = pos;
+      final queryParams = <String, dynamic>{
+        'page': page,
+        'limit': limit,
+      };
+
+      if (categoryId != null && categoryId.isNotEmpty) queryParams['category_id'] = categoryId;
+      if (pos != null && pos.isNotEmpty) queryParams['part_of_speech'] = pos;
       if (isFavorite != null) queryParams['is_favorite'] = isFavorite;
+      if (isBookmarked != null) queryParams['is_bookmarked'] = isBookmarked;
+      if (startDate != null) queryParams['start_date'] = startDate;
+      if (endDate != null) queryParams['end_date'] = endDate;
       if (sortBy != null) queryParams['sort_by'] = sortBy;
 
       final response = await apiClient.dio.get('/words', queryParameters: queryParams);
@@ -75,5 +87,21 @@ class HomeRepository {
 
   Future<void> toggleBookmark(String wordId) async {
     await apiClient.dio.patch('/words/$wordId/bookmark');
+  }
+
+  Future<void> deleteWord(String id) async {
+    try {
+      await apiClient.dio.delete('/words/$id');
+    } catch (e) {
+      throw Exception('Gagal menghapus kata: $e');
+    }
+  }
+
+  Future<void> updateWord(String id, Map<String, dynamic> body) async {
+    try {
+      await apiClient.dio.put('/words/$id', data: body);
+    } catch (e) {
+      throw Exception('Gagal mengedit kata: $e');
+    }
   }
 }
