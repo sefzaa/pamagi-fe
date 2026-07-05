@@ -14,18 +14,17 @@ class AuthRepository {
         "password": password,
       });
 
-      // Simpan token ke brankas
       final data = response.data;
       await SecureStorageHelper.saveTokens(
         data['access_token'],
         data['refresh_token'],
       );
     } on DioException catch (e) {
-      // Menangkap error dari Backend Go
       if (e.response != null) {
         throw Exception(e.response?.data.toString() ?? 'Kredensial salah!');
       } else {
-        throw Exception('Tidak ada koneksi ke server');
+        // TAMPILKAN ERROR ASLI DARI DIO
+        throw Exception('Gagal koneksi: ${e.message}');
       }
     } catch (e) {
       throw Exception('Terjadi kesalahan: $e');
