@@ -6,10 +6,10 @@ import 'package:pamagi/features/flashcards/logic/flashcard_state.dart';
 import 'package:pamagi/features/home/logic/home_cubit.dart';
 
 class FlashcardQuizScreen extends StatefulWidget {
-  final Map<String, dynamic>? config; // Untuk kuis baru
-  final List<dynamic>? historyDetails; // Untuk resume/review
-  final String? sessionId; // ID sesi jika resume/review
-  final bool isReviewMode; // True jika status COMPLETED
+  final Map<String, dynamic>? config;
+  final List<dynamic>? historyDetails;
+  final String? sessionId;
+  final bool isReviewMode;
 
   const FlashcardQuizScreen({
     super.key,
@@ -32,20 +32,17 @@ class _FlashcardQuizScreenState extends State<FlashcardQuizScreen> {
   @override
   void initState() {
     super.initState();
-    // CEK MODE: Resume/Review atau Kuis Baru
     if (widget.historyDetails != null) {
       flashcards = widget.historyDetails!;
       answers = flashcards.map((e) => e['is_correct'] as bool?).toList();
 
       if (widget.isReviewMode) {
-        currentIndex = 0; // Mulai dari awal untuk review
+        currentIndex = 0;
       } else {
-        // Cari soal pertama yang belum dijawab (is_correct == null)
         currentIndex = answers.indexWhere((ans) => ans == null);
         if (currentIndex == -1) currentIndex = 0;
       }
     } else {
-      // Kuis Baru: Panggil API Generate
       context.read<FlashcardCubit>().generateFlashcards(widget.config!);
     }
   }
@@ -71,26 +68,26 @@ class _FlashcardQuizScreenState extends State<FlashcardQuizScreen> {
   }
 
   void _goNext() {
-    // Di mode review bisa bebas next, di kuis harus dijawab dulu
     if (currentIndex < flashcards.length - 1 && (widget.isReviewMode || answers[currentIndex] != null)) {
       setState(() { currentIndex++; isFlipped = false; });
     }
   }
 
   void _submitSession(String status) {
-    // Siapkan list details untuk dikirim ke backend
     List<Map<String, dynamic>> quizDetails = [];
+
+    // PERBAIKAN POIN 3: Looping tanpa memfilter answers yang null
+    // Semua kartu wajib dikirim agar backend tahu total soal aslinya
     for (int i = 0; i < flashcards.length; i++) {
-      if (answers[i] != null) {
-        quizDetails.add({
-          "word_id": flashcards[i]['word_id'] ?? flashcards[i]['id'],
-          "is_correct": answers[i]
-        });
-      }
+      quizDetails.add({
+        "word_id": flashcards[i]['word_id'] ?? flashcards[i]['id'],
+        "is_correct": answers[i] // Ini akan mengirimkan null untuk soal yang belum dijawab
+      });
     }
 
     final payload = {
-      "id": widget.sessionId ?? flashcards[0]['session_id'] ?? "new_session",
+      // UBAH BARIS INI: Hapus "new_session" dan ganti dengan string kosong
+      "id": widget.sessionId ?? "",
       "status": status,
       "total_words": flashcards.length,
       "correct_answers": correctAnswers,
@@ -104,7 +101,6 @@ class _FlashcardQuizScreenState extends State<FlashcardQuizScreen> {
     if (status == 'COMPLETED') {
       _showCompletionDialog();
     } else {
-      // Jika IN_PROGRESS (Save & Quit)
       Navigator.pop(context, true);
       context.read<HomeCubit>().fetchDashboardData();
     }
@@ -119,8 +115,8 @@ class _FlashcardQuizScreenState extends State<FlashcardQuizScreen> {
         actions: [
           TextButton(
               onPressed: () {
-                Navigator.pop(ctx); // Tutup dialog
-                Navigator.pop(context); // Keluar tanpa save
+                Navigator.pop(ctx);
+                Navigator.pop(context);
               },
               child: const Text('Quit Without Saving', style: TextStyle(color: Colors.red))
           ),
@@ -200,7 +196,6 @@ class _FlashcardQuizScreenState extends State<FlashcardQuizScreen> {
   }
 
   Widget _buildCard(Map<String, dynamic> word) {
-    // Untuk review/resume, mode selalu default menampilkan rusia di depan agar rapi
     final mode = widget.config?['session_mode'] ?? 'RU';
     bool showRussianFront = mode != 'Translate';
     if (mode == 'Random') showRussianFront = (word['id'].hashCode + currentIndex) % 2 == 0;
@@ -262,7 +257,6 @@ class _FlashcardQuizScreenState extends State<FlashcardQuizScreen> {
               ],
 
               const Spacer(),
-              // LABEL BENAR/SALAH DI MODE REVIEW
               if (widget.isReviewMode)
                 Container(
                   padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
@@ -286,16 +280,15 @@ class _FlashcardQuizScreenState extends State<FlashcardQuizScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // POPSCOPE: Mencegat tombol back
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
         if (widget.isReviewMode) {
-          Navigator.pop(context); // Kalau review, langsung keluar saja
+          Navigator.pop(context);
           return;
         }
-        _showSaveConfirmation(); // Kalau kuis jalan, minta konfirmasi
+        _showSaveConfirmation();
       },
       child: Scaffold(
         backgroundColor: const Color(0xFFF8F9FA),
@@ -363,7 +356,9 @@ class _FlashcardQuizScreenState extends State<FlashcardQuizScreen> {
                       ],
                     ),
 
-                    const Spacer(),
+                    // PERBAIKAN POIN 1: Mengganti Spacer() menjadi SizedBox(height: 32)
+                    const SizedBox(height: 32),
+
                     if (!widget.isReviewMode) ...[
                       Text('CURRENT SCORE', style: TextStyle(fontSize: 10, color: Colors.grey.shade600, letterSpacing: 1.5, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 4),
@@ -377,7 +372,6 @@ class _FlashcardQuizScreenState extends State<FlashcardQuizScreen> {
                       const SizedBox(height: 24),
                     ],
 
-                    // TOMBOL BAWAH: Jika review, sembunyikan Wrong/Know
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [

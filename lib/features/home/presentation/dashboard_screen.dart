@@ -57,7 +57,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildQuickStartCard(),
+                    _buildQuickStartCard(context),
                 const SizedBox(height: 16),
                 _buildVocabularyMasteryCard(state.totalWords, context),
                 const SizedBox(height: 24),
@@ -136,43 +136,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildQuickStartCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade200), borderRadius: BorderRadius.circular(16)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: const Color(0xFFE0F2F1), borderRadius: BorderRadius.circular(8)),
-            child: const Icon(Icons.style, color: Color(0xFF00AA5B)),
-          ),
-          const SizedBox(height: 16),
-          const Text('Quick Start Review', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          const Text('Resume your spaced repetition session. You have 15 items waiting for review today.', style: TextStyle(color: Colors.grey)),
-          const SizedBox(height: 16),
-          const Text('START SESSION  ➔', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00AA5B))),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFlashcardEntry(BuildContext context) {
+  Widget _buildQuickStartCard(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        // Navigasi ke menu Flashcard di navbar (index 1)
-        // Pastikan logic pindah tab navbar sudah ada, atau cukup buka layarnya:
+        // Mengarahkan langsung ke halaman Flashcard History
         Navigator.push(context, MaterialPageRoute(builder: (_) => const FlashcardScreen()));
       },
       child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.shade200),
+            color: Colors.white,
+            border: Border.all(color: Colors.grey.shade200),
+            borderRadius: BorderRadius.circular(16)
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -182,17 +157,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
               decoration: BoxDecoration(color: const Color(0xFFE8F5E9), borderRadius: BorderRadius.circular(8)),
               child: const Icon(Icons.style, color: Color(0xFF00AA5B)),
             ),
-            const SizedBox(height: 12),
-            const Text('Quick Start Review', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 4),
-            const Text('Resume your spaced repetition session. Test your memory today!', style: TextStyle(color: Colors.grey, fontSize: 13)),
-            const SizedBox(height: 12),
-            const Text('START SESSION →', style: TextStyle(color: Color(0xFF00AA5B), fontWeight: FontWeight.bold, fontSize: 12)),
+            const SizedBox(height: 16),
+            const Text('Flashcard Sessions', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            const Text('Open your flashcard history and resume your spaced repetition session.', style: TextStyle(color: Colors.grey, fontSize: 13)),
+            const SizedBox(height: 16),
+            const Text('OPEN HISTORY  ➔', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00AA5B))),
           ],
         ),
       ),
     );
   }
+
+
 
   Widget _buildVocabularyMasteryCard(int totalWords, BuildContext context) {
     return Container(

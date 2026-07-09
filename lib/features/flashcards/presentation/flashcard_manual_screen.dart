@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pamagi/features/home/logic/home_cubit.dart';
-import 'package:pamagi/features/home/logic/home_state.dart';
 
 class FlashcardManualScreen extends StatefulWidget {
   final int maxLimit;
@@ -12,20 +11,72 @@ class FlashcardManualScreen extends StatefulWidget {
 }
 
 class _FlashcardManualScreenState extends State<FlashcardManualScreen> {
+  final ScrollController _scrollController = ScrollController();
+  List<dynamic> words = [];
   List<String> selectedWordIds = [];
   String searchQuery = '';
+
+  int currentPage = 1;
+  bool isLoading = false;
+  bool hasMore = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchWords();
+
+    // Setup Infinite Scroll
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200 && !isLoading && hasMore) {
+        _fetchWords();
+      }
+    });
+  }
+
+  Future<void> _fetchWords() async {
+    if (isLoading) return;
+    setState(() => isLoading = true);
+
+    try {
+      // Kita pakai repository dari HomeCubit untuk memanggil API GET /words
+      final repo = context.read<HomeCubit>().repository;
+      final res = await repo.getWords(page: currentPage, limit: 20);
+      final newWords = res['data'] as List;
+
+      setState(() {
+        if (newWords.length < 20) hasMore = false;
+        words.addAll(newWords);
+        currentPage++;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() => isLoading = false);
+    }
+  }
 
   void _submitSelection() {
     if (selectedWordIds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pilih minimal 1 kata!')));
       return;
     }
-    // Return word IDs ke Bottom Sheet
     Navigator.pop(context, selectedWordIds);
   }
 
   @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // Filter pencarian lokal dari data yang sudah di-load
+    final displayedWords = words.where((w) {
+      final rw = (w['russian_word'] ?? '').toString().toLowerCase();
+      final tr = (w['translation'] ?? '').toString().toLowerCase();
+      return rw.contains(searchQuery) || tr.contains(searchQuery);
+    }).toList();
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -42,63 +93,59 @@ class _FlashcardManualScreenState extends State<FlashcardManualScreen> {
           TextButton(onPressed: _submitSelection, child: const Text('DONE', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00AA5B))))
         ],
       ),
-      body: BlocBuilder<HomeCubit, HomeState>(
-        builder: (context, state) {
-          if (state is! HomeLoaded) return const Center(child: CircularProgressIndicator());
-
-          final words = state.recentWords.where((w) {
-            final rw = (w['russian_word'] ?? '').toString().toLowerCase();
-            final tr = (w['translation'] ?? '').toString().toLowerCase();
-            return rw.contains(searchQuery) || tr.contains(searchQuery);
-          }).toList();
-
-          return Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: TextField(
-                  onChanged: (val) => setState(() => searchQuery = val.toLowerCase()),
-                  decoration: InputDecoration(
-                    hintText: 'Search words...',
-                    prefixIcon: const Icon(Icons.search),
-                    filled: true, fillColor: Colors.grey.shade100,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                  ),
-                ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: TextField(
+              onChanged: (val) => setState(() => searchQuery = val.toLowerCase()),
+              decoration: InputDecoration(
+                hintText: 'Search words...',
+                prefixIcon: const Icon(Icons.search),
+                filled: true, fillColor: Colors.grey.shade100,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
               ),
-              Expanded(
-                child: ListView.separated(
-                  itemCount: words.length,
-                  separatorBuilder: (_, __) => Divider(color: Colors.grey.shade200, height: 1),
-                  itemBuilder: (context, index) {
-                    final word = words[index];
-                    final isSelected = selectedWordIds.contains(word['id']);
+            ),
+          ),
+          Expanded(
+            child: words.isEmpty && isLoading
+                ? const Center(child: CircularProgressIndicator(color: Color(0xFF00AA5B)))
+                : ListView.separated(
+              controller: _scrollController,
+              itemCount: displayedWords.length + (hasMore ? 1 : 0),
+              separatorBuilder: (_, __) => Divider(color: Colors.grey.shade200, height: 1),
+              itemBuilder: (context, index) {
+                // Tampilkan loading indicator di paling bawah saat scroll
+                if (index == displayedWords.length) {
+                  return const Padding(padding: EdgeInsets.all(16.0), child: Center(child: CircularProgressIndicator(color: Color(0xFF00AA5B))));
+                }
 
-                    return CheckboxListTile(
-                      activeColor: const Color(0xFF00AA5B),
-                      title: Text(word['russian_word'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: Text(word['translation'] ?? ''),
-                      value: isSelected,
-                      onChanged: (bool? val) {
-                        setState(() {
-                          if (val == true) {
-                            if (selectedWordIds.length >= widget.maxLimit) {
-                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Limit maksimal ${widget.maxLimit} kata!')));
-                            } else {
-                              selectedWordIds.add(word['id']);
-                            }
-                          } else {
-                            selectedWordIds.remove(word['id']);
-                          }
-                        });
-                      },
-                    );
+                final word = displayedWords[index];
+                final isSelected = selectedWordIds.contains(word['id']);
+
+                return CheckboxListTile(
+                  activeColor: const Color(0xFF00AA5B),
+                  title: Text(word['russian_word'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Text(word['translation'] ?? ''),
+                  value: isSelected,
+                  onChanged: (bool? val) {
+                    setState(() {
+                      if (val == true) {
+                        if (selectedWordIds.length >= widget.maxLimit) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Limit maksimal ${widget.maxLimit} kata!')));
+                        } else {
+                          selectedWordIds.add(word['id']);
+                        }
+                      } else {
+                        selectedWordIds.remove(word['id']);
+                      }
+                    });
                   },
-                ),
-              ),
-            ],
-          );
-        },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
