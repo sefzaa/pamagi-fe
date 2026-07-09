@@ -1,18 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pamagi/core/api_client.dart';
 import 'package:pamagi/features/flashcards/data/flashcard_repository.dart';
-import 'package:pamagi/features/flashcards/logic/flashcard_cubit.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pamagi/features/home/logic/home_cubit.dart';
 import 'package:pamagi/features/flashcards/presentation/flashcard_setup_sheet.dart';
 import 'package:pamagi/features/flashcards/presentation/flashcard_quiz_screen.dart';
-import 'package:pamagi/features/home/presentation/word_list_screen.dart';
-import 'package:pamagi/features/home/presentation/add_word_sheet.dart';
+import 'package:pamagi/features/flashcards/logic/flashcard_cubit.dart';
 
 class FlashcardScreen extends StatefulWidget {
-  final bool isPushed; // Penanda apakah layar ini dibuka dari Dashboard
-
-  const FlashcardScreen({super.key, this.isPushed = false});
+  const FlashcardScreen({super.key});
 
   @override
   State<FlashcardScreen> createState() => _FlashcardScreenState();
@@ -34,14 +30,13 @@ class _FlashcardScreenState extends State<FlashcardScreen> {
     setState(() => isLoading = true);
     try {
       final data = await _repository.getHistory();
-      if (mounted) {
-        setState(() {
-          history = data;
-          isLoading = false;
-        });
-      }
+      setState(() {
+        history = data;
+        isLoading = false;
+      });
     } catch (e) {
-      if (mounted) setState(() => isLoading = false);
+      setState(() => isLoading = false);
+      // Abaikan error di UI untuk sekarang agar tidak mengganggu jika kosong
     }
   }
 
@@ -56,74 +51,26 @@ class _FlashcardScreenState extends State<FlashcardScreen> {
     }
   }
 
-  // Bikin Header (AppBar) yang HANYA muncul kalau diakses dari Dashboard
-  PreferredSizeWidget? _buildAppBar() {
-    if (!widget.isPushed) return null; // Hilang jika ada di dalam Navbar
-
-    return AppBar(
-      backgroundColor: Colors.white,
-      elevation: 0,
-      iconTheme: const IconThemeData(color: Color(0xFF00AA5B)), // Warna panah back
-      leading: IconButton(
-        icon: const Icon(Icons.favorite, color: Colors.red),
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => WordListScreen(
-                repository: context.read<HomeCubit>().repository,
-                title: 'Favorite Words',
-                isFavorite: true,
-              ),
-            ),
-          );
-        },
-      ),
-      title: const Text('PAMAGI', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF00AA5B), letterSpacing: 1.5)),
-      centerTitle: true,
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.add_box, color: Color(0xFF00AA5B), size: 28),
-          onPressed: () async {
-            final bool? isAdded = await showModalBottomSheet(
-              context: context,
-              isScrollControlled: true,
-              backgroundColor: Colors.transparent,
-              builder: (_) => BlocProvider.value(
-                value: context.read<HomeCubit>(),
-                child: AddWordSheet(repository: context.read<HomeCubit>().repository),
-              ),
-            );
-            if (isAdded == true) {
-              context.read<HomeCubit>().fetchDashboardData();
-            }
-          },
-        ),
-        const SizedBox(width: 8),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      appBar: _buildAppBar(), // Panggil header cerdas di sini
+      // APPBAR DIHAPUS agar tidak double header
       body: RefreshIndicator(
         color: const Color(0xFF00AA5B),
         onRefresh: _fetchHistory,
         child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
+          physics: const AlwaysScrollableScrollPhysics(), // Memaksa bisa di-scroll & refresh
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 16),
+              const SizedBox(height: 16), // Jarak dari atas (karena tidak ada appbar)
 
               // Banner Start New Session
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(24),
-                margin: const EdgeInsets.symmetric(horizontal: 16),
+                margin: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: const Color(0xFF00AA5B),
                   borderRadius: BorderRadius.circular(16),
@@ -167,18 +114,18 @@ class _FlashcardScreenState extends State<FlashcardScreen> {
               ),
 
               const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                 child: Text('Session History', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
               ),
 
-              // List History
+              // List History (Pakai shrinkWrap karena di dalam SingleChildScrollView)
               isLoading
                   ? const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator(color: Color(0xFF00AA5B))))
                   : history.isEmpty
                   ? const Center(child: Padding(padding: EdgeInsets.all(20), child: Text('Belum ada riwayat kuis.', style: TextStyle(color: Colors.grey))))
                   : ListView.builder(
                 shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
+                physics: const NeverScrollableScrollPhysics(), // Scroll diurus parent
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 itemCount: history.length,
                 itemBuilder: (context, index) {

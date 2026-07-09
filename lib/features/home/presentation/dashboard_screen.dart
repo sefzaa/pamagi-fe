@@ -5,6 +5,10 @@ import 'package:pamagi/features/home/logic/home_state.dart';
 import 'package:pamagi/features/home/presentation/add_word_sheet.dart';
 import 'package:pamagi/features/home/presentation/word_list_screen.dart';
 import 'package:pamagi/features/flashcards/presentation/flashcard_screen.dart';
+import 'package:pamagi/features/flashcards/logic/flashcard_cubit.dart';
+import 'package:pamagi/features/flashcards/presentation/flashcard_setup_sheet.dart';
+import 'package:pamagi/features/flashcards/presentation/flashcard_quiz_screen.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 
 
 class DashboardScreen extends StatefulWidget {
@@ -19,12 +23,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool isCategoryTab = true;
 
   IconData _getCategoryIcon(String? iconName) {
+    // Samakan persis dengan iconList yang ada di AddWordSheet
     final Map<String, IconData> iconMap = {
-      'folder': Icons.folder, 'book': Icons.book, 'briefcase': Icons.business_center,
-      'coffee': Icons.local_cafe, 'globe': Icons.public, 'heart': Icons.favorite,
-      'music': Icons.music_note, 'shopping_cart': Icons.shopping_cart, 'camera': Icons.camera_alt,
+      'folder': LucideIcons.folder, 'book': LucideIcons.book, 'briefcase': LucideIcons.briefcase,
+      'coffee': LucideIcons.coffee, 'globe': LucideIcons.globe, 'heart': LucideIcons.heart,
+      'music': LucideIcons.music, 'shopping_cart': LucideIcons.shopping_cart, 'camera': LucideIcons.camera,
+      'utensils': LucideIcons.utensils, 'car': LucideIcons.car, 'plane': LucideIcons.plane,
+      'activity': LucideIcons.activity, 'alarm_clock': LucideIcons.alarm_clock, 'anchor': LucideIcons.anchor,
+      'apple': LucideIcons.apple, 'archive': LucideIcons.archive, 'award': LucideIcons.award,
+      'backpack': LucideIcons.backpack, 'battery': LucideIcons.battery, 'bell': LucideIcons.bell,
+      'cloud': LucideIcons.cloud, 'cpu': LucideIcons.cpu, 'database': LucideIcons.database,
+      'droplet': LucideIcons.droplet, 'feather': LucideIcons.feather, 'flag': LucideIcons.flag,
+      'gift': LucideIcons.gift, 'glasses': LucideIcons.glasses, 'headphones': LucideIcons.headphones,
     };
-    return iconMap[iconName] ?? Icons.folder_open;
+
+    // Fallback default jika nama icon dari database tidak ditemukan di map
+    return iconMap[iconName?.toLowerCase()] ?? LucideIcons.folder;
   }
 
   IconData _getPosIcon(String? posName) {
@@ -138,9 +152,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildQuickStartCard(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        // isPushed: true akan memberi tahu FlashcardScreen untuk memunculkan Header!
-        Navigator.push(context, MaterialPageRoute(builder: (_) => const FlashcardScreen(isPushed: true)));
+      onTap: () async {
+        // 1. Panggil Bottom Sheet Setup persis seperti di menu Flashcard
+        final config = await showModalBottomSheet<Map<String, dynamic>>(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (_) => BlocProvider.value(
+            value: context.read<HomeCubit>(),
+            child: const FlashcardSetupSheet(),
+          ),
+        );
+
+        // 2. Jika user klik Start Session di Bottom Sheet
+        if (config != null && context.mounted) {
+          final refresh = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => BlocProvider.value(
+                value: context.read<FlashcardCubit>(),
+                child: FlashcardQuizScreen(config: config),
+              ),
+            ),
+          );
+
+          // 3. Jika kuis selesai/disimpan, refresh jumlah vocab di dashboard
+          if (refresh == true && context.mounted) {
+            context.read<HomeCubit>().fetchDashboardData();
+          }
+        }
       },
       child: Container(
         padding: const EdgeInsets.all(20),
@@ -158,11 +198,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: const Icon(Icons.style, color: Color(0xFF00AA5B)),
             ),
             const SizedBox(height: 16),
+            // Teks dikembalikan seperti semula
             const Text('Quick Start Review', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             const Text('Resume your spaced repetition session. Test your memory today!', style: TextStyle(color: Colors.grey, fontSize: 13)),
             const SizedBox(height: 16),
-            // Teks dikembalikan menjadi START SESSION
             const Text('START SESSION  ➔', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00AA5B))),
           ],
         ),
