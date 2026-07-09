@@ -150,6 +150,7 @@ class _AddWordSheetState extends State<AddWordSheet> {
   }
 
   // --- DESAIN MODAL KATEGORI YANG BARU & ELEGAN ---
+// --- DESAIN MODAL KATEGORI YANG BARU & ELEGAN ---
   Future<void> _showCategorySelection() async {
     await showModalBottomSheet(
       context: context,
@@ -158,76 +159,78 @@ class _AddWordSheetState extends State<AddWordSheet> {
       builder: (BuildContext context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
-            return Container(
-              height: MediaQuery.of(context).size.height * 0.55, // 55% dari tinggi layar
-              padding: const EdgeInsets.all(24),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Select Categories', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF00AA5B))),
-                      IconButton(icon: const Icon(Icons.close, color: Colors.grey), onPressed: () => Navigator.pop(context)),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Expanded(
-                    child: ListView.separated(
-                      itemCount: categories.length,
-                      separatorBuilder: (context, index) => Divider(color: Colors.grey.shade200, height: 1),
-                      itemBuilder: (context, index) {
-                        final cat = categories[index];
-                        final isSelected = selectedCategoryIds.contains(cat['id']);
-                        return ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: Text(
-                              cat['name'],
-                              style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                  color: isSelected ? Colors.black87 : Colors.black54
-                              )
-                          ),
-                          trailing: isSelected
-                              ? const Icon(Icons.check_circle, color: Colors.blue)
-                              : const Icon(Icons.circle_outlined, color: Colors.grey),
-                          onTap: () {
-                            setModalState(() {
-                              if (isSelected) {
-                                selectedCategoryIds.remove(cat['id']);
-                              } else {
-                                selectedCategoryIds.add(cat['id']);
-                              }
-                            });
-                            setState(() {}); // Update tampilan di belakang layar utama
-                          },
-                        );
-                      },
+            // V-- TAMBAHKAN WIDGET MATERIAL DI SINI --V
+            return Material(
+              color: Colors.white, // Pindahkan warna ke Material
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)), // Pindahkan border radius
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.55,
+                padding: const EdgeInsets.all(24),
+                // HAPUS decoration: BoxDecoration(...) dari Container ini
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Select Categories', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF00AA5B))),
+                        IconButton(icon: const Icon(Icons.close, color: Colors.grey), onPressed: () => Navigator.pop(context)),
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(context); // Tutup modal ini dulu
-                        _addNewCategory();      // Baru buka input kategori baru
-                      },
-                      icon: const Icon(Icons.add, color: Color(0xFF00AA5B)),
-                      label: const Text('Create New Category', style: TextStyle(color: Color(0xFF00AA5B), fontWeight: FontWeight.bold)),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        side: const BorderSide(color: Color(0xFF00AA5B)),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: ListView.separated(
+                        itemCount: categories.length,
+                        separatorBuilder: (context, index) => Divider(color: Colors.grey.shade200, height: 1),
+                        itemBuilder: (context, index) {
+                          final cat = categories[index];
+                          final isSelected = selectedCategoryIds.contains(cat['id']);
+                          return ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(
+                                cat['name'],
+                                style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                    color: isSelected ? Colors.black87 : Colors.black54
+                                )
+                            ),
+                            trailing: isSelected
+                                ? const Icon(Icons.check_circle, color: Colors.blue)
+                                : const Icon(Icons.circle_outlined, color: Colors.grey),
+                            onTap: () {
+                              setModalState(() {
+                                if (isSelected) {
+                                  selectedCategoryIds.remove(cat['id']);
+                                } else {
+                                  selectedCategoryIds.add(cat['id']);
+                                }
+                              });
+                              setState(() {});
+                            },
+                          );
+                        },
                       ),
                     ),
-                  )
-                ],
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _addNewCategory();
+                        },
+                        icon: const Icon(Icons.add, color: Color(0xFF00AA5B)),
+                        label: const Text('Create New Category', style: TextStyle(color: Color(0xFF00AA5B), fontWeight: FontWeight.bold)),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          side: const BorderSide(color: Color(0xFF00AA5B)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                    )
+                  ],
+                ),
               ),
             );
           },
