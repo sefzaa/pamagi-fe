@@ -4,6 +4,8 @@ import 'package:pamagi/features/home/logic/home_cubit.dart';
 import 'package:pamagi/features/home/logic/home_state.dart';
 import 'package:pamagi/features/home/presentation/add_word_sheet.dart';
 import 'package:pamagi/features/home/presentation/word_list_screen.dart';
+import 'package:pamagi/features/flashcards/presentation/flashcard_screen.dart';
+
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -153,6 +155,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 16),
           const Text('START SESSION  ➔', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00AA5B))),
         ],
+      ),
+    );
+  }
+
+  Widget _buildFlashcardEntry(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        // Navigasi ke menu Flashcard di navbar (index 1)
+        // Pastikan logic pindah tab navbar sudah ada, atau cukup buka layarnya:
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const FlashcardScreen()));
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: const Color(0xFFE8F5E9), borderRadius: BorderRadius.circular(8)),
+              child: const Icon(Icons.style, color: Color(0xFF00AA5B)),
+            ),
+            const SizedBox(height: 12),
+            const Text('Quick Start Review', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            const Text('Resume your spaced repetition session. Test your memory today!', style: TextStyle(color: Colors.grey, fontSize: 13)),
+            const SizedBox(height: 12),
+            const Text('START SESSION →', style: TextStyle(color: Color(0xFF00AA5B), fontWeight: FontWeight.bold, fontSize: 12)),
+          ],
+        ),
       ),
     );
   }

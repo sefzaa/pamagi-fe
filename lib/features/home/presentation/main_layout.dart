@@ -5,6 +5,7 @@ import 'package:pamagi/features/home/presentation/add_word_sheet.dart'; // Impor
 import 'package:pamagi/features/home/logic/home_cubit.dart'; // Import ini untuk akses repository
 import 'package:pamagi/features/home/presentation/word_list_screen.dart';
 import 'package:pamagi/features/home/presentation/library_screen.dart';
+import 'package:pamagi/features/flashcards/presentation/flashcard_screen.dart';
 
 class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
@@ -18,7 +19,7 @@ class _MainLayoutState extends State<MainLayout> {
 
   final List<Widget> _screens = [
     const LibraryScreen(),
-    const Center(child: Text('Flashcards Screen')),
+    const FlashcardScreen(),
     const DashboardScreen(), // Dashboard Screen kita
     const Center(child: Text('Bookmark Screen')),
     const Center(child: Text('Profile Screen')),

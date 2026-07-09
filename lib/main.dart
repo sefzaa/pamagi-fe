@@ -9,6 +9,8 @@ import 'package:pamagi/features/auth/presentation/register_screen.dart';
 import 'package:pamagi/features/home/presentation/main_layout.dart';
 import 'package:pamagi/features/home/data/home_repository.dart';
 import 'package:pamagi/features/home/logic/home_cubit.dart';
+import 'package:pamagi/features/flashcards/data/flashcard_repository.dart';
+import 'package:pamagi/features/flashcards/logic/flashcard_cubit.dart';
 
 Future<void> main() async {
   // Wajib dipanggil sebelum runApp
@@ -20,10 +22,12 @@ Future<void> main() async {
   final apiClient = ApiClient();
   final authRepository = AuthRepository(apiClient);
   final homeRepository = HomeRepository(apiClient);
+  final flashcardRepository = FlashcardRepository(apiClient); // <--- Tambahkan ini
 
   runApp(MyApp(
       authRepository: authRepository,
-      homeRepository: homeRepository
+      homeRepository: homeRepository,
+      flashcardRepository: flashcardRepository // <--- Tambahkan ini
 
   ));
 }
@@ -31,10 +35,12 @@ Future<void> main() async {
 class MyApp extends StatelessWidget {
   final AuthRepository authRepository;
   final HomeRepository homeRepository;
+  final FlashcardRepository flashcardRepository;
 
   const MyApp({super.key,
     required this.authRepository,
-    required this.homeRepository
+    required this.homeRepository,
+    required this.flashcardRepository,
   });
 
   @override
@@ -44,7 +50,12 @@ class MyApp extends StatelessWidget {
         BlocProvider<AuthCubit>(
           create: (context) => AuthCubit(authRepository),
         ),
-        BlocProvider<HomeCubit>(create: (context) => HomeCubit(homeRepository)..fetchDashboardData()),
+        BlocProvider<HomeCubit>(
+            create: (context) => HomeCubit(homeRepository)..fetchDashboardData()
+        ),
+        BlocProvider<FlashcardCubit>( // <--- Tambahkan blok ini
+          create: (context) => FlashcardCubit(flashcardRepository),
+        ),
       ],
       child: MaterialApp(
         title: 'Pamagi',

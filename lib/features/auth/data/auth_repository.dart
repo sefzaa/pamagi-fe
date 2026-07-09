@@ -15,9 +15,10 @@ class AuthRepository {
       });
 
       final data = response.data;
-      await SecureStorageHelper.saveTokens(
+      await SecureStorageHelper.saveAuthData(
         data['access_token'],
         data['refresh_token'],
+        data['user']['subscription_status'] ?? 'FREE',
       );
     } on DioException catch (e) {
       if (e.response != null) {
@@ -37,9 +38,10 @@ class AuthRepository {
 
       // Jika sukses, simpan token
       final data = response.data;
-      await SecureStorageHelper.saveTokens(
+      await SecureStorageHelper.saveAuthData(
         data['access_token'],
         data['refresh_token'],
+        data['user']['subscription_status'] ?? 'FREE',
       );
     } on DioException catch (e) {
       // 1. Tangkap error spesifik dari Backend
