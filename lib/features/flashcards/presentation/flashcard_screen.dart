@@ -142,7 +142,29 @@ class _FlashcardScreenState extends State<FlashcardScreen> {
                         child: Icon(isCompleted ? Icons.check_circle : Icons.pending_actions, color: isCompleted ? const Color(0xFF00AA5B) : Colors.orange),
                       ),
                       title: Text(_formatDate(session['created_at']), style: const TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: Text('Score: ${session['correct_answers'] ?? 0} / ${session['total_words'] ?? 0}'),
+                      subtitle: Text(isCompleted
+                          ? 'Score: ${session['correct_answers'] ?? 0} / ${session['total_words'] ?? 0}'
+                          : 'In Progress: ${session['total_words'] ?? 0} words'),
+                      trailing: isCompleted
+                          ? const Text('Review', style: TextStyle(color: Color(0xFF00AA5B), fontWeight: FontWeight.bold, fontSize: 12))
+                          : const Text('Resume', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 12)),
+                      onTap: () async {
+                        if (session['details'] == null || session['details'].isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Detail sesi tidak tersedia.')));
+                          return;
+                        }
+                        final refresh = await Navigator.push(context, MaterialPageRoute(
+                          builder: (_) => BlocProvider.value(
+                            value: context.read<FlashcardCubit>(),
+                            child: FlashcardQuizScreen(
+                              historyDetails: session['details'],
+                              sessionId: session['id'],
+                              isReviewMode: isCompleted,
+                            ),
+                          ),
+                        ));
+                        if (refresh == true) _fetchHistory();
+                      },
                     ),
                   );
                 },

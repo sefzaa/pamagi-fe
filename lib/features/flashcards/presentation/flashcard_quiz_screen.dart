@@ -6,8 +6,18 @@ import 'package:pamagi/features/flashcards/logic/flashcard_state.dart';
 import 'package:pamagi/features/home/logic/home_cubit.dart';
 
 class FlashcardQuizScreen extends StatefulWidget {
-  final Map<String, dynamic> config;
-  const FlashcardQuizScreen({super.key, required this.config});
+  final Map<String, dynamic>? config; // Untuk kuis baru
+  final List<dynamic>? historyDetails; // Untuk resume/review
+  final String? sessionId; // ID sesi jika resume/review
+  final bool isReviewMode; // True jika status COMPLETED
+
+  const FlashcardQuizScreen({
+    super.key,
+    this.config,
+    this.historyDetails,
+    this.sessionId,
+    this.isReviewMode = false,
+  });
 
   @override
   State<FlashcardQuizScreen> createState() => _FlashcardQuizScreenState();
@@ -17,13 +27,27 @@ class _FlashcardQuizScreenState extends State<FlashcardQuizScreen> {
   int currentIndex = 0;
   bool isFlipped = false;
   List<dynamic> flashcards = [];
-  List<bool?> answers = []; // Menyimpan status: true (Know), false (Wrong), null (Belum)
-  List<Map<String, dynamic>> quizDetails = [];
+  List<bool?> answers = [];
 
   @override
   void initState() {
     super.initState();
-    context.read<FlashcardCubit>().generateFlashcards(widget.config);
+    // CEK MODE: Resume/Review atau Kuis Baru
+    if (widget.historyDetails != null) {
+      flashcards = widget.historyDetails!;
+      answers = flashcards.map((e) => e['is_correct'] as bool?).toList();
+
+      if (widget.isReviewMode) {
+        currentIndex = 0; // Mulai dari awal untuk review
+      } else {
+        // Cari soal pertama yang belum dijawab (is_correct == null)
+        currentIndex = answers.indexWhere((ans) => ans == null);
+        if (currentIndex == -1) currentIndex = 0;
+      }
+    } else {
+      // Kuis Baru: Panggil API Generate
+      context.read<FlashcardCubit>().generateFlashcards(widget.config!);
+    }
   }
 
   int get correctAnswers => answers.where((a) => a == true).length;
@@ -31,16 +55,10 @@ class _FlashcardQuizScreenState extends State<FlashcardQuizScreen> {
   void _answerCard(bool isCorrect) {
     setState(() {
       answers[currentIndex] = isCorrect;
-
-      // Simpan detail untuk submit ke API
-      quizDetails.add({
-        "word_id": flashcards[currentIndex]['id'],
-        "is_correct": isCorrect
-      });
-
       int nextUnanswered = answers.indexWhere((ans) => ans == null);
+
       if (nextUnanswered == -1) {
-        _finishQuiz();
+        _submitSession('COMPLETED');
       } else {
         currentIndex = nextUnanswered;
         isFlipped = false;
@@ -49,36 +67,77 @@ class _FlashcardQuizScreenState extends State<FlashcardQuizScreen> {
   }
 
   void _goPrevious() {
-    if (currentIndex > 0) {
-      setState(() {
-        currentIndex--;
-        isFlipped = false;
-      });
-    }
+    if (currentIndex > 0) setState(() { currentIndex--; isFlipped = false; });
   }
 
   void _goNext() {
-    // Hanya bisa next manual jika kartu saat ini SUDAH dijawab
-    if (currentIndex < flashcards.length - 1 && answers[currentIndex] != null) {
-      setState(() {
-        currentIndex++;
-        isFlipped = false;
-      });
+    // Di mode review bisa bebas next, di kuis harus dijawab dulu
+    if (currentIndex < flashcards.length - 1 && (widget.isReviewMode || answers[currentIndex] != null)) {
+      setState(() { currentIndex++; isFlipped = false; });
     }
   }
 
-  void _finishQuiz() {
+  void _submitSession(String status) {
+    // Siapkan list details untuk dikirim ke backend
+    List<Map<String, dynamic>> quizDetails = [];
+    for (int i = 0; i < flashcards.length; i++) {
+      if (answers[i] != null) {
+        quizDetails.add({
+          "word_id": flashcards[i]['word_id'] ?? flashcards[i]['id'],
+          "is_correct": answers[i]
+        });
+      }
+    }
+
     final payload = {
-      "id": flashcards[0]['session_id'] ?? "temp_id", // Pastikan API memberi session_id saat generate
-      "status": "COMPLETED",
+      "id": widget.sessionId ?? flashcards[0]['session_id'] ?? "new_session",
+      "status": status,
       "total_words": flashcards.length,
       "correct_answers": correctAnswers,
-      "incorrect_answers": flashcards.length - correctAnswers,
+      "incorrect_answers": answers.where((a) => a == false).length,
       "score": (correctAnswers / flashcards.length * 100).toInt(),
       "details": quizDetails
     };
+
     context.read<FlashcardCubit>().submitQuiz(payload);
 
+    if (status == 'COMPLETED') {
+      _showCompletionDialog();
+    } else {
+      // Jika IN_PROGRESS (Save & Quit)
+      Navigator.pop(context, true);
+      context.read<HomeCubit>().fetchDashboardData();
+    }
+  }
+
+  void _showSaveConfirmation() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Save Progress?'),
+        content: const Text('Anda belum menyelesaikan kuis ini. Apakah Anda ingin menyimpannya untuk dilanjutkan nanti?'),
+        actions: [
+          TextButton(
+              onPressed: () {
+                Navigator.pop(ctx); // Tutup dialog
+                Navigator.pop(context); // Keluar tanpa save
+              },
+              child: const Text('Quit Without Saving', style: TextStyle(color: Colors.red))
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00AA5B)),
+            onPressed: () {
+              Navigator.pop(ctx);
+              _submitSession('IN_PROGRESS');
+            },
+            child: const Text('Save & Quit', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCompletionDialog() {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -141,7 +200,8 @@ class _FlashcardQuizScreenState extends State<FlashcardQuizScreen> {
   }
 
   Widget _buildCard(Map<String, dynamic> word) {
-    final mode = widget.config['session_mode'] ?? 'RU';
+    // Untuk review/resume, mode selalu default menampilkan rusia di depan agar rapi
+    final mode = widget.config?['session_mode'] ?? 'RU';
     bool showRussianFront = mode != 'Translate';
     if (mode == 'Random') showRussianFront = (word['id'].hashCode + currentIndex) % 2 == 0;
 
@@ -192,7 +252,6 @@ class _FlashcardQuizScreenState extends State<FlashcardQuizScreen> {
               const Spacer(),
               Text(isFlipped ? backText : frontText, textAlign: TextAlign.center, style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: isFlipped ? Colors.black87 : const Color(0xFF00AA5B))),
 
-              // TAMPILKAN 1 CONTOH KALIMAT JIKA DIBALIK
               if (isFlipped && examples.isNotEmpty) ...[
                 const SizedBox(height: 24),
                 Divider(color: Colors.grey.shade200),
@@ -203,7 +262,21 @@ class _FlashcardQuizScreenState extends State<FlashcardQuizScreen> {
               ],
 
               const Spacer(),
-              Text(isFlipped ? 'Tap to flip back' : 'Tap to flip', style: const TextStyle(color: Colors.grey, fontSize: 14)),
+              // LABEL BENAR/SALAH DI MODE REVIEW
+              if (widget.isReviewMode)
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                  decoration: BoxDecoration(
+                      color: answers[currentIndex] == true ? Colors.green.shade50 : Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(8)
+                  ),
+                  child: Text(
+                    answers[currentIndex] == true ? 'Correctly Answered' : 'Incorrectly Answered',
+                    style: TextStyle(color: answers[currentIndex] == true ? Colors.green : Colors.red, fontWeight: FontWeight.bold),
+                  ),
+                )
+              else
+                Text(isFlipped ? 'Tap to flip back' : 'Tap to flip', style: const TextStyle(color: Colors.grey, fontSize: 14)),
             ],
           ),
         ),
@@ -213,119 +286,138 @@ class _FlashcardQuizScreenState extends State<FlashcardQuizScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      body: SafeArea(
-        child: BlocConsumer<FlashcardCubit, FlashcardState>(
-          listener: (context, state) {
-            if (state is FlashcardError) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message), backgroundColor: Colors.red));
-            }
-          },
-          builder: (context, state) {
-            if (state is FlashcardGenerated) {
-              // Inisialisasi daftar jawaban hanya jika belum diinisialisasi
-              if (flashcards.isEmpty) {
+    // POPSCOPE: Mencegat tombol back
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        if (widget.isReviewMode) {
+          Navigator.pop(context); // Kalau review, langsung keluar saja
+          return;
+        }
+        _showSaveConfirmation(); // Kalau kuis jalan, minta konfirmasi
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8F9FA),
+        body: SafeArea(
+          child: BlocConsumer<FlashcardCubit, FlashcardState>(
+            listener: (context, state) {
+              if (state is FlashcardError) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message), backgroundColor: Colors.red));
+              }
+            },
+            builder: (context, state) {
+              if (state is FlashcardGenerated && flashcards.isEmpty) {
                 flashcards = state.flashcards;
                 answers = List.filled(flashcards.length, null);
               }
-            }
 
-            if (state is FlashcardLoading || state is FlashcardInitial) return const Center(child: CircularProgressIndicator(color: Color(0xFF00AA5B)));
-            if (flashcards.isEmpty) return const Center(child: Text('No words found for this filter.'));
+              if ((state is FlashcardLoading || state is FlashcardInitial) && flashcards.isEmpty) return const Center(child: CircularProgressIndicator(color: Color(0xFF00AA5B)));
+              if (flashcards.isEmpty) return const Center(child: Text('No words found.'));
 
-            final currentWord = flashcards[currentIndex];
-            final progress = (currentIndex + 1) / flashcards.length;
+              final currentWord = flashcards[currentIndex];
+              final progress = (currentIndex + 1) / flashcards.length;
 
-            return Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
-                      Expanded(
-                        child: Column(
-                          children: [
-                            const Text('Session Progress', style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)),
-                            const SizedBox(height: 8),
-                            LinearProgressIndicator(value: progress, backgroundColor: Colors.grey.shade300, color: const Color(0xFF00AA5B), minHeight: 6, borderRadius: BorderRadius.circular(10)),
-                            const SizedBox(height: 4),
-                            Text('${currentIndex + 1} / ${flashcards.length}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                          ],
+              return Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        IconButton(
+                            icon: const Icon(Icons.close),
+                            onPressed: () {
+                              if (widget.isReviewMode) Navigator.pop(context);
+                              else _showSaveConfirmation();
+                            }
                         ),
-                      ),
-                      IconButton(icon: const Icon(Icons.more_vert), onPressed: () {}),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  // AREA KARTU DAN TOMBOL NAVIGASI KIRI KANAN
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back_ios),
-                        color: currentIndex > 0 ? Colors.black87 : Colors.grey.shade300,
-                        onPressed: currentIndex > 0 ? _goPrevious : null,
-                      ),
-                      Expanded(child: _buildCard(currentWord)),
-                      IconButton(
-                        icon: const Icon(Icons.arrow_forward_ios),
-                        // Aktif HANYA jika bukan kartu terakhir DAN kartu ini sudah dijawab
-                        color: (currentIndex < flashcards.length - 1 && answers[currentIndex] != null) ? Colors.black87 : Colors.grey.shade300,
-                        onPressed: (currentIndex < flashcards.length - 1 && answers[currentIndex] != null) ? _goNext : null,
-                      ),
-                    ],
-                  ),
-
-                  const Spacer(),
-                  Text('CURRENT SCORE', style: TextStyle(fontSize: 10, color: Colors.grey.shade600, letterSpacing: 1.5, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text('$correctAnswers', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF00AA5B))),
-                      Text(' / ${flashcards.length}', style: const TextStyle(fontSize: 16, color: Colors.grey)),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Tombol Jawab Bawah
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFC62828), padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                          onPressed: () => _answerCard(false),
-                          icon: const Icon(Icons.close, color: Colors.white),
-                          label: const Text('Wrong', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        Expanded(
+                          child: Column(
+                            children: [
+                              Text(widget.isReviewMode ? 'Review Mode' : 'Session Progress', style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)),
+                              const SizedBox(height: 8),
+                              LinearProgressIndicator(value: progress, backgroundColor: Colors.grey.shade300, color: const Color(0xFF00AA5B), minHeight: 6, borderRadius: BorderRadius.circular(10)),
+                              const SizedBox(height: 4),
+                              Text('${currentIndex + 1} / ${flashcards.length}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(backgroundColor: Colors.white, side: BorderSide(color: Colors.grey.shade400), padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                          onPressed: () => _showInfoSheet(currentWord),
-                          icon: const Icon(Icons.lightbulb_outline, color: Colors.black87),
-                          label: const Text('Info', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
+                        IconButton(icon: const Icon(Icons.more_vert), onPressed: () {}),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.arrow_back_ios),
+                          color: currentIndex > 0 ? Colors.black87 : Colors.grey.shade300,
+                          onPressed: currentIndex > 0 ? _goPrevious : null,
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00AA5B), padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                          onPressed: () => _answerCard(true),
-                          icon: const Icon(Icons.check, color: Colors.white),
-                          label: const Text('Know', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        Expanded(child: _buildCard(currentWord)),
+                        IconButton(
+                          icon: const Icon(Icons.arrow_forward_ios),
+                          color: (currentIndex < flashcards.length - 1 && (widget.isReviewMode || answers[currentIndex] != null)) ? Colors.black87 : Colors.grey.shade300,
+                          onPressed: (currentIndex < flashcards.length - 1 && (widget.isReviewMode || answers[currentIndex] != null)) ? _goNext : null,
                         ),
+                      ],
+                    ),
+
+                    const Spacer(),
+                    if (!widget.isReviewMode) ...[
+                      Text('CURRENT SCORE', style: TextStyle(fontSize: 10, color: Colors.grey.shade600, letterSpacing: 1.5, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text('$correctAnswers', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF00AA5B))),
+                          Text(' / ${flashcards.length}', style: const TextStyle(fontSize: 16, color: Colors.grey)),
+                        ],
                       ),
+                      const SizedBox(height: 24),
                     ],
-                  )
-                ],
-              ),
-            );
-          },
+
+                    // TOMBOL BAWAH: Jika review, sembunyikan Wrong/Know
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        if (!widget.isReviewMode)
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFC62828), padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                              onPressed: () => _answerCard(false),
+                              icon: const Icon(Icons.close, color: Colors.white),
+                              label: const Text('Wrong', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                        if (!widget.isReviewMode) const SizedBox(width: 12),
+
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(backgroundColor: Colors.white, side: BorderSide(color: Colors.grey.shade400), padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                            onPressed: () => _showInfoSheet(currentWord),
+                            icon: const Icon(Icons.lightbulb_outline, color: Colors.black87),
+                            label: const Text('Info', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+
+                        if (!widget.isReviewMode) const SizedBox(width: 12),
+                        if (!widget.isReviewMode)
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00AA5B), padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                              onPressed: () => _answerCard(true),
+                              icon: const Icon(Icons.check, color: Colors.white),
+                              label: const Text('Know', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                      ],
+                    )
+                  ],
+                ),
+              );
+            },
+          ),
         ),
       ),
     );

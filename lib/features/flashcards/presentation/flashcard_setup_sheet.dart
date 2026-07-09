@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pamagi/core/secure_storage_helper.dart';
 import 'package:pamagi/features/home/logic/home_cubit.dart';
 import 'package:pamagi/features/home/logic/home_state.dart';
+import 'package:pamagi/features/flashcards/presentation/flashcard_manual_screen.dart';
 
 class FlashcardSetupSheet extends StatefulWidget {
   const FlashcardSetupSheet({super.key});
@@ -235,19 +236,57 @@ class _FlashcardSetupSheetState extends State<FlashcardSetupSheet> {
             ),
           ),
 
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF00AA5B),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+// UBAH BAGIAN BAWAH INI
+          Column(
+            children: [
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Color(0xFF00AA5B)),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: () async {
+                    // Panggil halaman Manual Select
+                    final selectedIds = await Navigator.push<List<String>>(
+                        context,
+                        MaterialPageRoute(builder: (_) => BlocProvider.value(
+                            value: context.read<HomeCubit>(),
+                            child: FlashcardManualScreen(maxLimit: maxLimit)
+                        ))
+                    );
+
+                    if (selectedIds != null && selectedIds.isNotEmpty) {
+                      // Tutup bottom sheet & kirim konfigurasi "manual"
+                      Navigator.pop(context, {
+                        "filter_type": "manual",
+                        "word_ids": selectedIds,
+                        "total_questions": selectedIds.length,
+                        "session_mode": sessionMode,
+                      });
+                    }
+                  },
+                  icon: const Icon(Icons.checklist, color: Color(0xFF00AA5B)),
+                  label: const Text('Or Select Words Manually', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF00AA5B))),
+                ),
               ),
-              onPressed: _startSession,
-              icon: const Icon(Icons.play_arrow, color: Colors.white),
-              label: const Text('Start Session', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-            ),
-          ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF00AA5B),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: _startSession,
+                  icon: const Icon(Icons.play_arrow, color: Colors.white),
+                  label: const Text('Start Session', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                ),
+              ),
+            ],
+          )
         ],
       ),
     );
