@@ -10,7 +10,7 @@ class FlashcardRepository {
       final response = await apiClient.dio.get('/flashcards/history');
       return response.data as List<dynamic>;
     } catch (e) {
-      throw Exception('Gagal memuat riwayat flashcard: $e');
+      throw Exception('Failed to load flashcard history: $e');
     }
   }
 
@@ -19,7 +19,7 @@ class FlashcardRepository {
       final response = await apiClient.dio.post('/flashcards/generate', data: requestBody);
       return response.data as List<dynamic>;
     } catch (e) {
-      throw Exception('Gagal membuat soal flashcard: $e');
+      throw Exception('Failed to generate flashcards: $e');
     }
   }
 
@@ -27,7 +27,7 @@ class FlashcardRepository {
     try {
       await apiClient.dio.post('/flashcards/submit', data: requestBody);
     } catch (e) {
-      throw Exception('Gagal menyimpan hasil kuis: $e');
+      throw Exception('Failed to submit quiz results: $e');
     }
   }
 }

@@ -6,6 +6,7 @@ import 'package:pamagi/features/home/logic/home_cubit.dart'; // Import ini untuk
 import 'package:pamagi/features/home/presentation/word_list_screen.dart';
 import 'package:pamagi/features/home/presentation/library_screen.dart';
 import 'package:pamagi/features/flashcards/presentation/flashcard_screen.dart';
+import 'package:pamagi/features/notes/presentation/notes_screen.dart';
 
 class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
@@ -21,7 +22,7 @@ class _MainLayoutState extends State<MainLayout> {
     const LibraryScreen(),
     const FlashcardScreen(),
     const DashboardScreen(), // Dashboard Screen kita
-    const Center(child: Text('Bookmark Screen')),
+    const NotesScreen(),
     const Center(child: Text('Profile Screen')),
   ];
 
@@ -85,7 +86,7 @@ class _MainLayoutState extends State<MainLayout> {
           BottomNavigationBarItem(icon: Icon(Icons.book_outlined), activeIcon: Icon(Icons.book), label: 'Library'),
           BottomNavigationBarItem(icon: Icon(Icons.style_outlined), activeIcon: Icon(Icons.style), label: 'Flashcards'),
           BottomNavigationBarItem(icon: Icon(Icons.dashboard_outlined), activeIcon: Icon(Icons.dashboard), label: 'Dashboard'),
-          BottomNavigationBarItem(icon: Icon(Icons.bookmark_border), activeIcon: Icon(Icons.bookmark), label: 'Bookmark'), // Berubah jadi Bookmark
+          BottomNavigationBarItem(icon: Icon(Icons.edit_note_outlined), activeIcon: Icon(Icons.edit_note), label: 'Notes'),
           BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Profile'),
         ],
       ),

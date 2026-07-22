@@ -47,6 +47,7 @@ dependencies:
   path: ^1.8.3
   country_picker: ^2.0.28
   flutter_lucide: ^1.11.0
+  fleather: ^1.27.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

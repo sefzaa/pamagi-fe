@@ -9,6 +9,8 @@ import 'package:pamagi/features/flashcards/logic/flashcard_cubit.dart';
 import 'package:pamagi/features/flashcards/presentation/flashcard_setup_sheet.dart';
 import 'package:pamagi/features/flashcards/presentation/flashcard_quiz_screen.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
+import 'package:country_picker/country_picker.dart';
+import 'package:pamagi/features/home/presentation/word_detail_screen.dart';
 
 
 class DashboardScreen extends StatefulWidget {
@@ -138,7 +140,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(height: 16),
 
                 if (state.recentWords.isEmpty)
-                  const Padding(padding: EdgeInsets.symmetric(vertical: 24), child: Center(child: Text('Belum ada kata nih!', style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic))))
+                  const Padding(padding: EdgeInsets.symmetric(vertical: 24), child: Center(child: Text('No words added yet!', style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic))))
                 else
                   ...state.recentWords.map((word) => _buildWordListTile(word, context)),
               ],
@@ -309,50 +311,166 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  String _getFlagEmoji(String code) {
+    try {
+      // Fallback khusus untuk 'EN'
+      // (Karena 'EN' adalah kode bahasa, sedangkan library membaca kode negara seperti 'GB' atau 'US')
+      if (code.toUpperCase() == 'EN') return '🇬🇧';
+
+      // Menggunakan library country_picker untuk otomatis mengambil bendera dari kode negara
+      final country = CountryParser.parseCountryCode(code.toUpperCase());
+      return country.flagEmoji;
+    } catch (e) {
+      // Jika kode kosong atau tidak dikenali, kembalikan bendera putih
+      return '🌍';
+    }
+  }
+
+  // --- TAMBAHAN UNTUK LONG PRESS MENU DI DASHBOARD ---
+  void _showLongPressMenu(Map<String, dynamic> word) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.remove_red_eye, color: Colors.blue),
+              title: const Text('Word Detail'),
+              onTap: () {
+                Navigator.pop(ctx);
+                Navigator.push(context, MaterialPageRoute(builder: (_) => WordDetailScreen(word: word)));
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.edit, color: Colors.orange),
+              title: const Text('Edit Word'),
+              onTap: () async {
+                Navigator.pop(ctx);
+                final bool? isUpdated = await showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (_) => BlocProvider.value(
+                    value: context.read<HomeCubit>(),
+                    child: AddWordSheet(repository: context.read<HomeCubit>().repository, initialWord: word),
+                  ),
+                );
+                if (isUpdated == true) context.read<HomeCubit>().fetchDashboardData();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete, color: Colors.red),
+              title: const Text('Delete Word', style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _confirmDelete(word['id']);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _confirmDelete(String wordId) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Word?'),
+        content: const Text('This action cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              try {
+                await context.read<HomeCubit>().repository.deleteWord(wordId);
+                if (context.mounted) {
+                  context.read<HomeCubit>().fetchDashboardData();
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                }
+              }
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+  // --------------------------------------------------
+
   Widget _buildWordListTile(Map<String, dynamic> word, BuildContext context) {
     final cubit = context.read<HomeCubit>();
     final isFav = word['is_favorite'] == true;
     final isBook = word['is_bookmarked'] == true;
+    final targets = word['targets'] as List? ?? [];
 
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Colors.grey.shade200))),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(word['russian_word'] ?? 'Unknown', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF00AA5B))),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(4)),
-                      child: Text(word['part_of_speech'] ?? 'N/A', style: const TextStyle(fontSize: 10, color: Colors.grey)),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(word['translation'] ?? 'No translation', style: const TextStyle(color: Colors.grey, fontSize: 13)),
-              ],
+    // BUNGKUS DENGAN INKWELL AGAR BISA DIKLIK DAN DITAHAN LAMA
+    return InkWell(
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => WordDetailScreen(word: word))),
+      onLongPress: () => _showLongPressMenu(word),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Colors.grey.shade200))),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(word['native_word'] ?? 'Unknown', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF00AA5B))),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(4)),
+                        child: Text(word['part_of_speech'] ?? 'N/A', style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  targets.isEmpty
+                      ? const Text('No translation', style: TextStyle(color: Colors.grey, fontSize: 13))
+                      : Wrap(
+                    spacing: 12,
+                    children: targets.map((t) {
+                      final code = t['language_code'] ?? '';
+                      final flag = _getFlagEmoji(code);
+                      return Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(flag, style: const TextStyle(fontSize: 14)),
+                          const SizedBox(width: 4),
+                          Text(t['target_word'] ?? '', style: TextStyle(color: Colors.grey.shade700, fontSize: 13)),
+                        ],
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
             ),
-          ),
-          Row(
-            children: [
-              IconButton(
-                icon: Icon(isFav ? Icons.favorite : Icons.favorite_border, color: isFav ? Colors.red : Colors.grey, size: 22),
-                onPressed: () => cubit.toggleWordFavorite(word['id'], isFav),
-              ),
-              IconButton(
-                icon: Icon(isBook ? Icons.bookmark : Icons.bookmark_border, color: isBook ? const Color(0xFF00AA5B) : Colors.grey, size: 22),
-                onPressed: () => cubit.toggleWordBookmark(word['id'], isBook),
-              ),
-            ],
-          )
-        ],
+            Row(
+              children: [
+                IconButton(
+                  icon: Icon(isFav ? Icons.favorite : Icons.favorite_border, color: isFav ? Colors.red : Colors.grey, size: 22),
+                  onPressed: () => cubit.toggleWordFavorite(word['id'], isFav),
+                ),
+                IconButton(
+                  icon: Icon(isBook ? Icons.bookmark : Icons.bookmark_border, color: isBook ? const Color(0xFF00AA5B) : Colors.grey, size: 22),
+                  onPressed: () => cubit.toggleWordBookmark(word['id'], isBook),
+                ),
+              ],
+            )
+          ],
+        ),
       ),
     );
   }

@@ -11,6 +11,8 @@ import 'package:pamagi/features/home/data/home_repository.dart';
 import 'package:pamagi/features/home/logic/home_cubit.dart';
 import 'package:pamagi/features/flashcards/data/flashcard_repository.dart';
 import 'package:pamagi/features/flashcards/logic/flashcard_cubit.dart';
+import 'package:pamagi/features/notes/data/note_repository.dart';
+import 'package:pamagi/features/notes/logic/note_cubit.dart';
 
 Future<void> main() async {
   // Wajib dipanggil sebelum runApp
@@ -22,13 +24,14 @@ Future<void> main() async {
   final apiClient = ApiClient();
   final authRepository = AuthRepository(apiClient);
   final homeRepository = HomeRepository(apiClient);
-  final flashcardRepository = FlashcardRepository(apiClient); // <--- Tambahkan ini
+  final flashcardRepository = FlashcardRepository(apiClient);
+  final noteRepository = NoteRepository(apiClient);
 
   runApp(MyApp(
       authRepository: authRepository,
       homeRepository: homeRepository,
-      flashcardRepository: flashcardRepository // <--- Tambahkan ini
-
+      flashcardRepository: flashcardRepository, // <--- Koma ditambahkan di sini
+      noteRepository: noteRepository
   ));
 }
 
@@ -36,11 +39,13 @@ class MyApp extends StatelessWidget {
   final AuthRepository authRepository;
   final HomeRepository homeRepository;
   final FlashcardRepository flashcardRepository;
+  final NoteRepository noteRepository;
 
   const MyApp({super.key,
     required this.authRepository,
     required this.homeRepository,
     required this.flashcardRepository,
+    required this.noteRepository,
   });
 
   @override
@@ -53,8 +58,11 @@ class MyApp extends StatelessWidget {
         BlocProvider<HomeCubit>(
             create: (context) => HomeCubit(homeRepository)..fetchDashboardData()
         ),
-        BlocProvider<FlashcardCubit>( // <--- Tambahkan blok ini
+        BlocProvider<FlashcardCubit>(
           create: (context) => FlashcardCubit(flashcardRepository),
+        ),
+        BlocProvider<NoteCubit>(
+            create: (context) => NoteCubit(noteRepository)..fetchNotes()
         ),
       ],
       child: MaterialApp(
@@ -67,8 +75,8 @@ class MyApp extends StatelessWidget {
         initialRoute: '/',
         routes: {
           '/': (context) => LoginScreen(),
-          '/register': (context) => const RegisterScreen(), // Tambahkan ini
-          '/home': (context) => const MainLayout(),         // Ubah ini ke MainLayout
+          '/register': (context) => const RegisterScreen(),
+          '/home': (context) => const MainLayout(),
         },
       ),
     );

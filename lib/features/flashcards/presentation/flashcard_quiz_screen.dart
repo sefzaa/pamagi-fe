@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:country_picker/country_picker.dart';
 import 'package:pamagi/features/flashcards/logic/flashcard_cubit.dart';
 import 'package:pamagi/features/flashcards/logic/flashcard_state.dart';
 import 'package:pamagi/features/home/logic/home_cubit.dart';
@@ -49,6 +50,16 @@ class _FlashcardQuizScreenState extends State<FlashcardQuizScreen> {
 
   int get correctAnswers => answers.where((a) => a == true).length;
 
+  String _getFlagEmoji(String code) {
+    try {
+      if (code.toUpperCase() == 'EN') return '🇬🇧';
+      final country = CountryParser.parseCountryCode(code.toUpperCase());
+      return country.flagEmoji;
+    } catch (e) {
+      return '🌍';
+    }
+  }
+
   void _answerCard(bool isCorrect) {
     setState(() {
       answers[currentIndex] = isCorrect;
@@ -76,17 +87,14 @@ class _FlashcardQuizScreenState extends State<FlashcardQuizScreen> {
   void _submitSession(String status) {
     List<Map<String, dynamic>> quizDetails = [];
 
-    // PERBAIKAN POIN 3: Looping tanpa memfilter answers yang null
-    // Semua kartu wajib dikirim agar backend tahu total soal aslinya
     for (int i = 0; i < flashcards.length; i++) {
       quizDetails.add({
         "word_id": flashcards[i]['word_id'] ?? flashcards[i]['id'],
-        "is_correct": answers[i] // Ini akan mengirimkan null untuk soal yang belum dijawab
+        "is_correct": answers[i]
       });
     }
 
     final payload = {
-      // UBAH BARIS INI: Hapus "new_session" dan ganti dengan string kosong
       "id": widget.sessionId ?? "",
       "status": status,
       "total_words": flashcards.length,
@@ -111,7 +119,7 @@ class _FlashcardQuizScreenState extends State<FlashcardQuizScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Save Progress?'),
-        content: const Text('Anda belum menyelesaikan kuis ini. Apakah Anda ingin menyimpannya untuk dilanjutkan nanti?'),
+        content: const Text('You haven\'t finished this quiz. Do you want to save it to continue later?'),
         actions: [
           TextButton(
               onPressed: () {
@@ -161,47 +169,67 @@ class _FlashcardQuizScreenState extends State<FlashcardQuizScreen> {
 
   void _showInfoSheet(Map<String, dynamic> word) {
     final examples = word['examples'] as List? ?? [];
+    final targets = word['targets'] as List? ?? [];
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (_) => Container(
         padding: const EdgeInsets.all(24),
         decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Word Info', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF00AA5B))),
-            const SizedBox(height: 16),
-            Text(word['russian_word'] ?? '', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-            Text(word['translation'] ?? '', style: const TextStyle(fontSize: 16, color: Colors.grey)),
-            const SizedBox(height: 24),
-            const Text('Examples:', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            if (examples.isEmpty) const Text('No examples available.', style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey)),
-            ...examples.map((ex) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(ex['russian_sentence'] ?? '', style: const TextStyle(fontSize: 15)),
-                  Text('"${ex['translated_sentence'] ?? ''}"', style: const TextStyle(color: Colors.grey, fontStyle: FontStyle.italic)),
-                ],
-              ),
-            )),
-          ],
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Word Info', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF00AA5B))),
+              const SizedBox(height: 16),
+              Text(word['native_word'] ?? '', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+
+              const SizedBox(height: 8),
+              ...targets.map((t) => Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text('${_getFlagEmoji(t['language_code'] ?? '')} ${t['target_word'] ?? ''}', style: const TextStyle(fontSize: 16, color: Colors.grey)),
+              )).toList(),
+
+              const SizedBox(height: 24),
+              const Text('Examples:', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              if (examples.isEmpty) const Text('No examples available.', style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey)),
+              ...examples.map((ex) {
+                final exTargets = ex['target_sentences'] as List? ?? [];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(ex['native_sentence'] ?? '', style: const TextStyle(fontSize: 15)),
+                      ...exTargets.map((et) => Text(
+                          '${_getFlagEmoji(et['language_code'] ?? '')} "${et['sentence'] ?? ''}"',
+                          style: const TextStyle(color: Colors.grey, fontStyle: FontStyle.italic)
+                      )).toList(),
+                    ],
+                  ),
+                );
+              }),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildCard(Map<String, dynamic> word) {
-    final mode = widget.config?['session_mode'] ?? 'RU';
-    bool showRussianFront = mode != 'Translate';
-    if (mode == 'Random') showRussianFront = (word['id'].hashCode + currentIndex) % 2 == 0;
+    final mode = widget.config?['session_mode'] ?? 'Native First';
+    bool showNativeFront = mode != 'Target First';
+    if (mode == 'Random') showNativeFront = (word['id'].hashCode + currentIndex) % 2 == 0;
 
-    final frontText = showRussianFront ? word['russian_word'] : word['translation'];
-    final backText = showRussianFront ? word['translation'] : word['russian_word'];
+    final targets = word['targets'] as List? ?? [];
+    final targetCombinedText = targets.map((t) => '${_getFlagEmoji(t['language_code'] ?? '')} ${t['target_word']}').join('\n');
+    final nativeText = word['native_word'] ?? '';
+
+    final frontText = showNativeFront ? nativeText : targetCombinedText;
+    final backText = showNativeFront ? targetCombinedText : nativeText;
     final examples = word['examples'] as List? ?? [];
 
     return GestureDetector(
@@ -245,15 +273,18 @@ class _FlashcardQuizScreenState extends State<FlashcardQuizScreen> {
                 ),
               ),
               const Spacer(),
-              Text(isFlipped ? backText : frontText, textAlign: TextAlign.center, style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: isFlipped ? Colors.black87 : const Color(0xFF00AA5B))),
+
+              Text(isFlipped ? backText : frontText, textAlign: TextAlign.center, style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: isFlipped ? Colors.black87 : const Color(0xFF00AA5B))),
 
               if (isFlipped && examples.isNotEmpty) ...[
                 const SizedBox(height: 24),
                 Divider(color: Colors.grey.shade200),
                 const SizedBox(height: 12),
-                Text('"${examples[0]['russian_sentence'] ?? ''}"', textAlign: TextAlign.center, style: const TextStyle(fontSize: 14, fontStyle: FontStyle.italic)),
+                Text('"${examples[0]['native_sentence'] ?? ''}"', textAlign: TextAlign.center, style: const TextStyle(fontSize: 14, fontStyle: FontStyle.italic)),
                 const SizedBox(height: 4),
-                Text(examples[0]['translated_sentence'] ?? '', textAlign: TextAlign.center, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                // Render example terjemahan pertama saja untuk preview kartu
+                if ((examples[0]['target_sentences'] as List? ?? []).isNotEmpty)
+                  Text(examples[0]['target_sentences'][0]['sentence'] ?? '', textAlign: TextAlign.center, style: const TextStyle(color: Colors.grey, fontSize: 13)),
               ],
 
               const Spacer(),
@@ -356,7 +387,6 @@ class _FlashcardQuizScreenState extends State<FlashcardQuizScreen> {
                       ],
                     ),
 
-                    // PERBAIKAN POIN 1: Mengganti Spacer() menjadi SizedBox(height: 32)
                     const SizedBox(height: 32),
 
                     if (!widget.isReviewMode) ...[

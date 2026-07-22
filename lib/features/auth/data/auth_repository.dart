@@ -22,13 +22,12 @@ class AuthRepository {
       );
     } on DioException catch (e) {
       if (e.response != null) {
-        throw Exception(e.response?.data.toString() ?? 'Kredensial salah!');
+        throw Exception(e.response?.data.toString() ?? 'Invalid credentials!');
       } else {
-        // TAMPILKAN ERROR ASLI DARI DIO
-        throw Exception('Gagal koneksi: ${e.message}');
+        throw Exception('Connection failed: ${e.message}');
       }
     } catch (e) {
-      throw Exception('Terjadi kesalahan: $e');
+      throw Exception('An error occurred: $e');
     }
   }
 
@@ -36,7 +35,6 @@ class AuthRepository {
     try {
       final response = await apiClient.dio.post('/register', data: requestBody);
 
-      // Jika sukses, simpan token
       final data = response.data;
       await SecureStorageHelper.saveAuthData(
         data['access_token'],
@@ -44,17 +42,13 @@ class AuthRepository {
         data['user']['subscription_status'] ?? 'FREE',
       );
     } on DioException catch (e) {
-      // 1. Tangkap error spesifik dari Backend
       if (e.response != null) {
-        // Ini akan menampilkan pesan asli dari Go (misal: "username already exists")
-        throw Exception(e.response?.data.toString() ?? 'Gagal daftar, cek inputanmu!');
+        throw Exception(e.response?.data.toString() ?? 'Registration failed, please check your input!');
       } else {
-        // Ini kalau internet mati atau server mati
-        throw Exception('Tidak ada koneksi ke server');
+        throw Exception('No connection to the server');
       }
     } catch (e) {
-      // Error umum lainnya
-      throw Exception('Terjadi kesalahan: $e');
+      throw Exception('An error occurred: $e');
     }
   }
 }

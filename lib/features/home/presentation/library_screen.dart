@@ -4,6 +4,7 @@ import 'package:pamagi/features/home/logic/home_cubit.dart';
 import 'package:pamagi/features/home/presentation/add_word_sheet.dart';
 import 'package:pamagi/features/home/presentation/library_filter_sheet.dart';
 import 'package:pamagi/features/home/presentation/word_detail_screen.dart';
+import 'package:country_picker/country_picker.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
@@ -90,7 +91,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
           children: [
             ListTile(
               leading: const Icon(Icons.remove_red_eye, color: Colors.blue),
-              title: const Text('Detail Word'),
+              title: const Text('Word Detail'),
               onTap: () {
                 Navigator.pop(ctx);
                 Navigator.push(context, MaterialPageRoute(builder: (_) => WordDetailScreen(word: word)));
@@ -154,6 +155,21 @@ class _LibraryScreenState extends State<LibraryScreen> {
     );
   }
 
+  String _getFlagEmoji(String code) {
+    try {
+      // Fallback khusus untuk 'EN'
+      // (Karena 'EN' adalah kode bahasa, sedangkan library membaca kode negara seperti 'GB' atau 'US')
+      if (code.toUpperCase() == 'EN') return '🇬🇧';
+
+      // Menggunakan library country_picker untuk otomatis mengambil bendera dari kode negara
+      final country = CountryParser.parseCountryCode(code.toUpperCase());
+      return country.flagEmoji;
+    } catch (e) {
+      // Jika kode kosong atau tidak dikenali, kembalikan bendera putih
+      return '🌍';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final repo = context.read<HomeCubit>().repository;
@@ -162,7 +178,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          // TOMBOL FILTER DI KANAN ATAS
           Padding(
             padding: const EdgeInsets.only(right: 16.0, top: 16.0, bottom: 8.0),
             child: Align(
@@ -185,7 +200,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
               color: const Color(0xFF00AA5B),
               onRefresh: () => _fetchWords(refresh: true),
               child: words.isEmpty && !isLoading
-                  ? const Center(child: Text('Tidak ada kata ditemukan.'))
+                  ? const Center(child: Text('No words found.', style: TextStyle(color: Colors.grey)))
                   : ListView.separated(
                 controller: _scrollController,
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -198,6 +213,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   final word = words[index];
                   final isFav = word['is_favorite'] == true;
                   final isBook = word['is_bookmarked'] == true;
+                  final targets = word['targets'] as List? ?? [];
 
                   return InkWell(
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => WordDetailScreen(word: word))),
@@ -213,17 +229,35 @@ class _LibraryScreenState extends State<LibraryScreen> {
                               children: [
                                 Row(
                                   children: [
-                                    Text(word['russian_word'] ?? '', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF00AA5B))),
+                                    // 1. NATIVE WORD SEBAGAI JUDUL
+                                    Text(word['native_word'] ?? 'Unknown', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF00AA5B))),
                                     const SizedBox(width: 8),
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                       decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(4)),
-                                      child: Text(word['part_of_speech'] ?? '', style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                                      child: Text(word['part_of_speech'] ?? 'N/A', style: const TextStyle(fontSize: 10, color: Colors.grey)),
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 4),
-                                Text(word['translation'] ?? '', style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                                const SizedBox(height: 6),
+                                // 2 & 3. TARGET LANGUAGES SEBAGAI SUBTITLE DENGAN BENDERA
+                                targets.isEmpty
+                                    ? const Text('No translation', style: TextStyle(color: Colors.grey, fontSize: 13))
+                                    : Wrap(
+                                  spacing: 12,
+                                  children: targets.map((t) {
+                                    final code = t['language_code'] ?? '';
+                                    final flag = _getFlagEmoji(code); // Ambil emoji bendera
+                                    return Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(flag, style: const TextStyle(fontSize: 14)), // Bendera
+                                        const SizedBox(width: 4),
+                                        Text(t['target_word'] ?? '', style: TextStyle(color: Colors.grey.shade700, fontSize: 13)),
+                                      ],
+                                    );
+                                  }).toList(),
+                                ),
                               ],
                             ),
                           ),

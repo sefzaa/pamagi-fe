@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:country_picker/country_picker.dart'; // Import library baru kita!
+import 'package:country_picker/country_picker.dart';
 import 'package:pamagi/features/auth/logic/auth_cubit.dart';
 import 'package:pamagi/features/auth/logic/auth_state.dart';
 
@@ -18,9 +18,51 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final passwordController = TextEditingController();
   final noWaController = TextEditingController();
 
-  // Variabel untuk menyimpan negara yang dipilih
-  String? selectedRegionName; // Untuk ditampilkan di layar (misal: Indonesia)
-  String? selectedRegionCode; // Untuk dikirim ke database BE (misal: ID)
+  // Variabel Native Language (Bahasa Ibu)
+  String? nativeLanguageCode;
+  String? nativeLanguageName;
+  String? nativeFlagIcon;
+
+  // Variabel Target Languages (Maksimal 2)
+  List<Map<String, String>> targetLanguages = [];
+
+  void _pickNativeLanguage() {
+    showCountryPicker(
+      context: context,
+      showPhoneCode: false,
+      onSelect: (Country country) {
+        setState(() {
+          nativeLanguageCode = country.countryCode;
+          nativeLanguageName = country.name;
+          nativeFlagIcon = country.flagEmoji;
+        });
+      },
+    );
+  }
+
+  void _pickTargetLanguage() {
+    if (targetLanguages.length >= 2) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Maximum 2 target languages allowed!')));
+      return;
+    }
+    showCountryPicker(
+      context: context,
+      showPhoneCode: false,
+      onSelect: (Country country) {
+        if (targetLanguages.any((lang) => lang['language_code'] == country.countryCode)) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Language already added!')));
+          return;
+        }
+        setState(() {
+          targetLanguages.add({
+            'language_code': country.countryCode,
+            'language_name': country.name,
+            'flag_icon': country.flagEmoji,
+          });
+        });
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -74,47 +116,62 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     _buildTextField('Password', 'At least 8 characters', passwordController, TextInputType.visiblePassword, true),
                     _buildTextField('WhatsApp Number', '+1...', noWaController, TextInputType.phone),
 
-                    // --- BAGIAN REGION ---
-                    const Text('Region', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF009688))),
+                    // --- NATIVE LANGUAGE ---
+                    const Text('Native Language', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF009688))),
                     const SizedBox(height: 8),
                     GestureDetector(
-                      onTap: () {
-                        showCountryPicker(
-                          context: context,
-                          showPhoneCode: false,
-                          onSelect: (Country country) {
-                            setState(() {
-                              // Simpan nama untuk UI, simpan kode untuk Backend
-                              selectedRegionName = country.name;
-                              selectedRegionCode = country.countryCode;
-                            });
-                          },
-                        );
-                      },
+                      onTap: _pickNativeLanguage,
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade400),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
+                        decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade400), borderRadius: BorderRadius.circular(8)),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              selectedRegionName ?? 'Select region', // Tampilkan namanya di sini
-                              style: TextStyle(
-                                color: selectedRegionName == null ? Colors.grey : Colors.black,
-                                fontSize: 16,
-                              ),
+                              nativeLanguageName != null ? '$nativeFlagIcon  $nativeLanguageName' : 'Select native language',
+                              style: TextStyle(color: nativeLanguageName == null ? Colors.grey : Colors.black, fontSize: 16),
                             ),
                             const Icon(Icons.arrow_drop_down, color: Colors.grey),
                           ],
                         ),
                       ),
                     ),
+                    const SizedBox(height: 16),
+
+                    // --- TARGET LANGUAGES ---
+                    const Text('Target Languages (Max 2)', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF009688))),
+                    const SizedBox(height: 8),
+                    ...targetLanguages.asMap().entries.map((entry) {
+                      int idx = entry.key;
+                      var lang = entry.value;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(color: Colors.grey.shade100, border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(8)),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('${lang['flag_icon']}  ${lang['language_name']}', style: const TextStyle(fontSize: 16)),
+                              GestureDetector(
+                                onTap: () => setState(() => targetLanguages.removeAt(idx)),
+                                child: const Icon(Icons.close, color: Colors.red, size: 20),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }),
+
+                    if (targetLanguages.length < 2)
+                      TextButton.icon(
+                        onPressed: _pickTargetLanguage,
+                        icon: const Icon(Icons.add, color: Color(0xFF009688)),
+                        label: const Text('Add Target Language', style: TextStyle(color: Color(0xFF009688), fontWeight: FontWeight.bold)),
+                      ),
                     const SizedBox(height: 24),
 
-                    // --- BAGIAN TOMBOL SIGN UP ---
+                    // --- SIGN UP BUTTON ---
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF00C853),
@@ -122,8 +179,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
                       onPressed: state is AuthLoading ? null : () {
-                        if (selectedRegionCode == null) {
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pilih region dulu bro!')));
+                        if (nativeLanguageCode == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select your native language!')));
+                          return;
+                        }
+                        if (targetLanguages.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select at least 1 target language!')));
                           return;
                         }
 
@@ -133,7 +194,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           "email": emailController.text,
                           "password": passwordController.text,
                           "no_wa": noWaController.text,
-                          "region": selectedRegionCode, // SEKARANG MENGIRIM KODE (Contoh: ID, MY, SG)
+                          "native_language": nativeLanguageCode,
+                          "native_flag_icon": nativeFlagIcon,
+                          "target_languages": targetLanguages,
                         };
                         context.read<AuthCubit>().registerUser(body);
                       },

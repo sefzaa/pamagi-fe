@@ -16,7 +16,7 @@ class _FlashcardSetupSheetState extends State<FlashcardSetupSheet> {
   List<String> selectedCategories = [];
   List<String> selectedWordTypes = [];
   String selectedDateAdded = 'Today';
-  String sessionMode = 'RU';
+  String sessionMode = 'Native First';
   double numCards = 20; // Default slider
 
   bool isPremium = false;
@@ -27,7 +27,7 @@ class _FlashcardSetupSheetState extends State<FlashcardSetupSheet> {
 
   final List<String> posOptions = ['NOUN', 'VERB', 'ADJECTIVE', 'ADVERB', 'IDIOM'];
   final List<String> dateOptions = ['Today', 'Yesterday', 'This Week', 'This Month', 'Custom'];
-  final List<String> modeOptions = ['RU', 'Translate', 'Random'];
+  final List<String> modeOptions = ['Native First', 'Target First', 'Random'];
 
   @override
   void initState() {

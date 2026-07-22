@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pamagi/features/home/logic/home_cubit.dart';
+import 'package:country_picker/country_picker.dart';
 
 class FlashcardManualScreen extends StatefulWidget {
   final int maxLimit;
@@ -25,7 +26,6 @@ class _FlashcardManualScreenState extends State<FlashcardManualScreen> {
     super.initState();
     _fetchWords();
 
-    // Setup Infinite Scroll
     _scrollController.addListener(() {
       if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200 && !isLoading && hasMore) {
         _fetchWords();
@@ -38,7 +38,6 @@ class _FlashcardManualScreenState extends State<FlashcardManualScreen> {
     setState(() => isLoading = true);
 
     try {
-      // Kita pakai repository dari HomeCubit untuk memanggil API GET /words
       final repo = context.read<HomeCubit>().repository;
       final res = await repo.getWords(page: currentPage, limit: 20);
       final newWords = res['data'] as List;
@@ -56,7 +55,7 @@ class _FlashcardManualScreenState extends State<FlashcardManualScreen> {
 
   void _submitSelection() {
     if (selectedWordIds.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pilih minimal 1 kata!')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Select at least 1 word!')));
       return;
     }
     Navigator.pop(context, selectedWordIds);
@@ -68,13 +67,23 @@ class _FlashcardManualScreenState extends State<FlashcardManualScreen> {
     super.dispose();
   }
 
+  String _getFlagEmoji(String code) {
+    try {
+      if (code.toUpperCase() == 'EN') return '🇬🇧';
+      final country = CountryParser.parseCountryCode(code.toUpperCase());
+      return country.flagEmoji;
+    } catch (e) {
+      return '🌍';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Filter pencarian lokal dari data yang sudah di-load
     final displayedWords = words.where((w) {
-      final rw = (w['russian_word'] ?? '').toString().toLowerCase();
-      final tr = (w['translation'] ?? '').toString().toLowerCase();
-      return rw.contains(searchQuery) || tr.contains(searchQuery);
+      final nw = (w['native_word'] ?? '').toString().toLowerCase();
+      final targets = w['targets'] as List? ?? [];
+      final tr = targets.map((t) => t['target_word']).join(' ').toLowerCase();
+      return nw.contains(searchQuery) || tr.contains(searchQuery);
     }).toList();
 
     return Scaffold(
@@ -115,7 +124,6 @@ class _FlashcardManualScreenState extends State<FlashcardManualScreen> {
               itemCount: displayedWords.length + (hasMore ? 1 : 0),
               separatorBuilder: (_, __) => Divider(color: Colors.grey.shade200, height: 1),
               itemBuilder: (context, index) {
-                // Tampilkan loading indicator di paling bawah saat scroll
                 if (index == displayedWords.length) {
                   return const Padding(padding: EdgeInsets.all(16.0), child: Center(child: CircularProgressIndicator(color: Color(0xFF00AA5B))));
                 }
@@ -123,16 +131,19 @@ class _FlashcardManualScreenState extends State<FlashcardManualScreen> {
                 final word = displayedWords[index];
                 final isSelected = selectedWordIds.contains(word['id']);
 
+                final targets = word['targets'] as List? ?? [];
+                final translationStr = targets.map((t) => '${_getFlagEmoji(t['language_code'] ?? '')} ${t['target_word']}').join('  •  ');
+
                 return CheckboxListTile(
                   activeColor: const Color(0xFF00AA5B),
-                  title: Text(word['russian_word'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text(word['translation'] ?? ''),
+                  title: Text(word['native_word'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Text(translationStr),
                   value: isSelected,
                   onChanged: (bool? val) {
                     setState(() {
                       if (val == true) {
                         if (selectedWordIds.length >= widget.maxLimit) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Limit maksimal ${widget.maxLimit} kata!')));
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Maximum limit is ${widget.maxLimit} words!')));
                         } else {
                           selectedWordIds.add(word['id']);
                         }

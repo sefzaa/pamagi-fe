@@ -119,10 +119,11 @@ class _FlashcardScreenState extends State<FlashcardScreen> {
               ),
 
               // List History (Pakai shrinkWrap karena di dalam SingleChildScrollView)
+              // List History (Pakai shrinkWrap karena di dalam SingleChildScrollView)
               isLoading
                   ? const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator(color: Color(0xFF00AA5B))))
                   : history.isEmpty
-                  ? const Center(child: Padding(padding: EdgeInsets.all(20), child: Text('Belum ada riwayat kuis.', style: TextStyle(color: Colors.grey))))
+                  ? const Center(child: Padding(padding: EdgeInsets.all(20), child: Text('No session history available.', style: TextStyle(color: Colors.grey))))
                   : ListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(), // Scroll diurus parent
@@ -150,7 +151,7 @@ class _FlashcardScreenState extends State<FlashcardScreen> {
                           : const Text('Resume', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 12)),
                       onTap: () async {
                         if (session['details'] == null || session['details'].isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Detail sesi tidak tersedia.')));
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Session details not available.')));
                           return;
                         }
                         final refresh = await Navigator.push(context, MaterialPageRoute(

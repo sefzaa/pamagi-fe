@@ -13,7 +13,7 @@ class HomeRepository {
       );
       return response.data as List<dynamic>;
     } catch (e) {
-      throw Exception('Gagal memuat kategori: $e');
+      throw Exception('Failed to load categories: $e');
     }
   }
 
@@ -22,7 +22,7 @@ class HomeRepository {
       final response = await apiClient.dio.get('/words/types');
       return response.data as List<dynamic>;
     } catch (e) {
-      throw Exception('Gagal memuat tipe kata: $e');
+      throw Exception('Failed to load word types: $e');
     }
   }
 
@@ -61,7 +61,7 @@ class HomeRepository {
       }
       return {'data': [], 'total_items': 0};
     } catch (e) {
-      throw Exception('Gagal memuat daftar kata: $e');
+      throw Exception('Failed to load words: $e');
     }
   }
 
@@ -69,7 +69,7 @@ class HomeRepository {
     try {
       await apiClient.dio.post('/categories', data: {"name": name, "icon": icon});
     } catch (e) {
-      throw Exception('Gagal menambah kategori: $e');
+      throw Exception('Failed to add category: $e');
     }
   }
 
@@ -77,7 +77,7 @@ class HomeRepository {
     try {
       await apiClient.dio.post('/words', data: body);
     } catch (e) {
-      throw Exception('Gagal menyimpan kata: $e');
+      throw Exception('Failed to save word: $e');
     }
   }
 
@@ -93,7 +93,7 @@ class HomeRepository {
     try {
       await apiClient.dio.delete('/words/$id');
     } catch (e) {
-      throw Exception('Gagal menghapus kata: $e');
+      throw Exception('Failed to delete word: $e');
     }
   }
 
@@ -101,7 +101,7 @@ class HomeRepository {
     try {
       await apiClient.dio.put('/words/$id', data: body);
     } catch (e) {
-      throw Exception('Gagal mengedit kata: $e');
+      throw Exception('Failed to update word: $e');
     }
   }
 }

@@ -21,7 +21,6 @@ class _WordDetailScreenState extends State<WordDetailScreen> {
     currentWord = Map<String, dynamic>.from(widget.word);
   }
 
-  // Fungsi mengubah "2026-07-04 04:00:09" jadi "Jul 04, 2026"
   String _formatDate(String? dateStr) {
     if (dateStr == null || dateStr.isEmpty) return '';
     try {
@@ -48,7 +47,7 @@ class _WordDetailScreenState extends State<WordDetailScreen> {
               try {
                 await context.read<HomeCubit>().repository.deleteWord(currentWord['id']);
                 context.read<HomeCubit>().fetchDashboardData();
-                Navigator.pop(context); // Kembali ke list
+                Navigator.pop(context);
               } catch (e) {
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
               }
@@ -64,12 +63,13 @@ class _WordDetailScreenState extends State<WordDetailScreen> {
   Widget build(BuildContext context) {
     final examples = currentWord['examples'] as List? ?? [];
     final categories = currentWord['categories'] as List? ?? [];
+    final targets = currentWord['targets'] as List? ?? [];
     final isFav = currentWord['is_favorite'] == true;
     final isBook = currentWord['is_bookmarked'] == true;
     final repo = context.read<HomeCubit>().repository;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA), // Latar belakang abu sangat tipis biar Card putihnya menonjol
+      backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
         title: const Text('Word Detail', style: TextStyle(color: Color(0xFF00AA5B), fontWeight: FontWeight.bold)),
         backgroundColor: Colors.white,
@@ -81,7 +81,6 @@ class _WordDetailScreenState extends State<WordDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // MAIN CARD
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -93,7 +92,6 @@ class _WordDetailScreenState extends State<WordDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Top Row: POS & Icons
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -124,23 +122,26 @@ class _WordDetailScreenState extends State<WordDetailScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  // Russian Word
-                  Text(currentWord['russian_word'] ?? 'Unknown', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, fontFamily: 'serif')), // Serif style
+                  // NATIVE WORD
+                  Text(currentWord['native_word'] ?? 'Unknown', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, fontFamily: 'serif')),
 
                   Divider(height: 32, color: Colors.grey.shade200),
 
-                  // Translation
-                  RichText(
-                    text: TextSpan(
+                  // TRANSLATION TARGETS
+                  const Text('Translations:', style: TextStyle(color: Color(0xFF00AA5B), fontWeight: FontWeight.bold, fontSize: 16)),
+                  const SizedBox(height: 8),
+                  ...targets.map((t) => Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const TextSpan(text: 'Translation: ', style: TextStyle(color: Color(0xFF00AA5B), fontWeight: FontWeight.bold, fontSize: 16)),
-                        TextSpan(text: currentWord['translation'] ?? '', style: const TextStyle(color: Colors.black87, fontSize: 16)),
+                        Text('[${t['language_code']}] ', style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 16)),
+                        Expanded(child: Text(t['target_word'] ?? '', style: const TextStyle(color: Colors.black87, fontSize: 16))),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 24),
+                  )).toList(),
 
-                  // Bottom Row: Categories & Edit Button
+                  const SizedBox(height: 24),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -167,7 +168,6 @@ class _WordDetailScreenState extends State<WordDetailScreen> {
                             ),
                           );
                           if (isUpdated == true) {
-                            // Jika update sukses, kita minta user re-open atau bisa fetch ulang by id (utk saat ini pop aja biar data refresh)
                             Navigator.pop(context);
                           }
                         },
@@ -179,36 +179,39 @@ class _WordDetailScreenState extends State<WordDetailScreen> {
             ),
             const SizedBox(height: 24),
 
-            // EXAMPLES SECTION
+            // EXAMPLES
             if (examples.isNotEmpty) ...[
               const Align(alignment: Alignment.centerLeft, child: Text('Example Sentences', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
               const SizedBox(height: 12),
-              ...examples.map((ex) => Container(
-                width: double.infinity,
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(color: Colors.white, border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(12)),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(ex['russian_sentence'] ?? '', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black87)),
-                    const SizedBox(height: 8),
-                    Text('"${ex['translated_sentence'] ?? ''}"', style: TextStyle(fontSize: 14, color: Colors.green.shade800, fontStyle: FontStyle.italic)),
-                  ],
-                ),
-              )),
+              ...examples.map((ex) {
+                final exTargets = ex['target_sentences'] as List? ?? [];
+                return Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(color: Colors.white, border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(12)),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(ex['native_sentence'] ?? '', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black87)),
+                      const SizedBox(height: 8),
+                      ...exTargets.map((et) => Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Text('• [${et['language_code']}] "${et['sentence']}"', style: TextStyle(fontSize: 14, color: Colors.green.shade800, fontStyle: FontStyle.italic)),
+                      )).toList(),
+                    ],
+                  ),
+                );
+              }),
             ],
             const SizedBox(height: 32),
 
-            // DELETE BUTTON
             TextButton.icon(
                 onPressed: _confirmDelete,
                 icon: const Icon(Icons.delete_outline, color: Colors.red),
                 label: const Text('DELETE', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, letterSpacing: 1.2))
             ),
             const SizedBox(height: 16),
-
-            // CREATED AT
             Text('Created: ${_formatDate(currentWord['created_at'])}', style: const TextStyle(color: Colors.grey, fontSize: 12)),
             const SizedBox(height: 24),
           ],
