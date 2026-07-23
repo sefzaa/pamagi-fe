@@ -5,6 +5,7 @@ import 'package:pamagi/features/home/presentation/add_word_sheet.dart';
 import 'package:pamagi/features/home/presentation/library_filter_sheet.dart';
 import 'package:pamagi/features/home/presentation/word_detail_screen.dart';
 import 'package:country_picker/country_picker.dart';
+import 'dart:async';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
@@ -23,6 +24,16 @@ class _LibraryScreenState extends State<LibraryScreen> {
   int currentPage = 1;
   bool isLoading = false;
   bool hasMore = true;
+
+  Timer? _debounce;
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _scrollController.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -135,12 +146,30 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 Expanded(
                   child: TextField(
                     controller: _searchController,
-                    onSubmitted: (_) => _fetchWords(refresh: true),
+                    onChanged: (value) {
+                      setState(() {}); // Memperbarui UI agar ikon 'X' bisa muncul
+
+                      // Membatalkan hitungan sebelumnya jika user masih mengetik
+                      if (_debounce?.isActive ?? false) _debounce!.cancel();
+
+                      // Memulai hitungan mundur 2.5 detik (2500 milidetik)
+                      _debounce = Timer(const Duration(milliseconds: 2500), () {
+                        _fetchWords(refresh: true);
+                      });
+                    },
                     decoration: InputDecoration(
                       hintText: 'Search words...',
                       prefixIcon: const Icon(Icons.search, color: Colors.grey),
                       suffixIcon: _searchController.text.isNotEmpty
-                          ? IconButton(icon: const Icon(Icons.clear, color: Colors.grey), onPressed: () { _searchController.clear(); _fetchWords(refresh: true); })
+                          ? IconButton(
+                          icon: const Icon(Icons.clear, color: Colors.grey),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() {}); // Hilangkan ikon 'X'
+                            if (_debounce?.isActive ?? false) _debounce!.cancel();
+                            _fetchWords(refresh: true);
+                          }
+                      )
                           : null,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),

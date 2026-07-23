@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pamagi/features/notes/logic/note_cubit.dart';
 import 'package:pamagi/features/notes/logic/note_state.dart';
 import 'package:pamagi/features/notes/presentation/note_editor_screen.dart';
+import 'dart:convert';
 
 class NotesScreen extends StatefulWidget {
   const NotesScreen({super.key});
@@ -56,6 +57,25 @@ class _NotesScreenState extends State<NotesScreen> {
     );
   }
 
+  String _getPlainTextPreview(String? raw) {
+    if (raw == null || raw.isEmpty) return '';
+    try {
+      if (raw.trim().startsWith('[')) {
+        final List<dynamic> ops = jsonDecode(raw);
+        String result = '';
+        for (var op in ops) {
+          if (op is Map && op.containsKey('insert') && op['insert'] is String) {
+            result += op['insert'];
+          }
+        }
+        return result.replaceAll('\n', ' ').trim();
+      }
+      return raw;
+    } catch (e) {
+      return raw.replaceAll(RegExp(r'<[^>]*>|[{}:"\[\]]'), ' ').replaceAll('insert', '').trim();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -88,6 +108,8 @@ class _NotesScreenState extends State<NotesScreen> {
                   return Card(
                     elevation: 0,
                     margin: const EdgeInsets.only(bottom: 12),
+                    color: Colors.grey.shade100, // Warna abu-abu murni yang soft
+                    surfaceTintColor: Colors.transparent, // Menghilangkan efek pink bawaan Material 3
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                       side: BorderSide(color: isPinned ? const Color(0xFF00AA5B) : Colors.grey.shade300, width: isPinned ? 1.5 : 1),
@@ -118,15 +140,19 @@ class _NotesScreenState extends State<NotesScreen> {
                               ],
                             ),
                             const SizedBox(height: 8),
-                            Text(note['preview'] ?? '', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.grey)),
+
+                            // MENGGUNAKAN FUNGSI CONVERTER TEKS MANUSIA
+                            Text(_getPlainTextPreview(note['preview']), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.grey)),
+
                             const SizedBox(height: 12),
                             if (tags.isNotEmpty)
                               Wrap(
                                 spacing: 8,
                                 children: tags.map((t) => Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(8)),
-                                  child: Text('#$t', style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                                  // WARNA BACKGROUND DAN TEXT TAG HIJAU SOFT
+                                  decoration: BoxDecoration(color: const Color(0xFFE8F5E9), borderRadius: BorderRadius.circular(8)),
+                                  child: Text('#$t', style: const TextStyle(fontSize: 12, color: Color(0xFF00AA5B), fontWeight: FontWeight.bold)),
                                 )).toList(),
                               )
                           ],
