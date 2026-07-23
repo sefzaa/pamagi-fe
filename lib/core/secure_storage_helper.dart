@@ -26,4 +26,10 @@ class SecureStorageHelper {
     await _storage.delete(key: _refreshKey);
     await _storage.delete(key: _statusKey);
   }
+
+  static Future<String?> getRefreshToken() async {
+    return await _storage.read(key: _refreshKey);
+  }
+
+
 }

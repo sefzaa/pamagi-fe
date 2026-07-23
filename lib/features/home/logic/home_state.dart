@@ -7,8 +7,9 @@ class HomeLoaded extends HomeState {
   final List<dynamic> recentWords;
   final List<dynamic> wordTypes;
   final int totalWords;
+  final Map<String, dynamic> userProfile; // Data user untuk Slogan & Bahasa
 
-  HomeLoaded(this.categories, this.recentWords, this.wordTypes, this.totalWords);
+  HomeLoaded(this.categories, this.recentWords, this.wordTypes, this.totalWords, this.userProfile);
 }
 class HomeError extends HomeState {
   final String message;

@@ -82,5 +82,57 @@ class ApiClient {
         return handler.next(options);
       },
     ));
+
+    dio.httpClientAdapter = IOHttpClientAdapter(
+      createHttpClient: () {
+        final client = HttpClient();
+        client.badCertificateCallback = (X509Certificate cert, String host, int port) => true;
+        return client;
+      },
+    );
+
+    dio.interceptors.add(InterceptorsWrapper(
+      onRequest: (options, handler) async {
+        final token = await SecureStorageHelper.getAccessToken();
+        if (token != null) {
+          options.headers['Authorization'] = 'Bearer $token';
+        }
+        return handler.next(options);
+      },
+      onError: (DioException e, handler) async {
+        // Tangkap pesan error dari backend Go (yang sudah diubah jadi bahasa Inggris)
+        if (e.response?.data != null && e.response?.data is Map) {
+          final errorMessage = e.response?.data['message'] ?? 'Something went wrong';
+          e = e.copyWith(message: errorMessage);
+        }
+
+        // Logic Auto-Refresh Token
+        if (e.response?.statusCode == 401) {
+          final refreshToken = await SecureStorageHelper.getRefreshToken();
+          if (refreshToken != null) {
+            try {
+              final refreshDio = Dio(BaseOptions(baseUrl: baseUrl));
+              refreshDio.httpClientAdapter = dio.httpClientAdapter;
+
+              final response = await refreshDio.post('/refresh', data: {
+                'refresh_token': refreshToken,
+              });
+
+              final newAccess = response.data['access_token'];
+              final newRefresh = response.data['refresh_token'];
+              final status = response.data['user']['subscription_status'] ?? 'FREE';
+              await SecureStorageHelper.saveAuthData(newAccess, newRefresh, status);
+
+              e.requestOptions.headers['Authorization'] = 'Bearer $newAccess';
+              final retryResponse = await refreshDio.fetch(e.requestOptions);
+              return handler.resolve(retryResponse);
+            } catch (_) {
+              await SecureStorageHelper.clearTokens();
+            }
+          }
+        }
+        return handler.next(e);
+      },
+    ));
   }
 }

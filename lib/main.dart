@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart'; // Wajib ada
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:pamagi/core/api_client.dart';
+import 'package:pamagi/core/secure_storage_helper.dart'; // Import ini untuk Auto-Login
 import 'package:pamagi/features/auth/data/auth_repository.dart';
 import 'package:pamagi/features/auth/logic/auth_cubit.dart';
 import 'package:pamagi/features/auth/presentation/login_screen.dart';
@@ -15,12 +16,13 @@ import 'package:pamagi/features/notes/data/note_repository.dart';
 import 'package:pamagi/features/notes/logic/note_cubit.dart';
 
 Future<void> main() async {
-  // Wajib dipanggil sebelum runApp
   WidgetsFlutterBinding.ensureInitialized();
-  // Load file .env yang ada di root folder
   await dotenv.load(fileName: ".env");
 
-  // Inisialisasi dependensi
+  // Mengecek token sebelum merender aplikasi
+  final token = await SecureStorageHelper.getAccessToken();
+  final String initialRoute = token != null ? '/home' : '/';
+
   final apiClient = ApiClient();
   final authRepository = AuthRepository(apiClient);
   final homeRepository = HomeRepository(apiClient);
@@ -28,10 +30,11 @@ Future<void> main() async {
   final noteRepository = NoteRepository(apiClient);
 
   runApp(MyApp(
-      authRepository: authRepository,
-      homeRepository: homeRepository,
-      flashcardRepository: flashcardRepository, // <--- Koma ditambahkan di sini
-      noteRepository: noteRepository
+    authRepository: authRepository,
+    homeRepository: homeRepository,
+    flashcardRepository: flashcardRepository,
+    noteRepository: noteRepository,
+    initialRoute: initialRoute, // Lempar route awal ke MyApp
   ));
 }
 
@@ -40,39 +43,34 @@ class MyApp extends StatelessWidget {
   final HomeRepository homeRepository;
   final FlashcardRepository flashcardRepository;
   final NoteRepository noteRepository;
+  final String initialRoute; // Menerima route awal
 
-  const MyApp({super.key,
+  const MyApp({
+    super.key,
     required this.authRepository,
     required this.homeRepository,
     required this.flashcardRepository,
     required this.noteRepository,
+    required this.initialRoute,
   });
 
   @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        BlocProvider<AuthCubit>(
-          create: (context) => AuthCubit(authRepository),
-        ),
-        BlocProvider<HomeCubit>(
-            create: (context) => HomeCubit(homeRepository)..fetchDashboardData()
-        ),
-        BlocProvider<FlashcardCubit>(
-          create: (context) => FlashcardCubit(flashcardRepository),
-        ),
-        BlocProvider<NoteCubit>(
-            create: (context) => NoteCubit(noteRepository)..fetchNotes()
-        ),
+        BlocProvider<AuthCubit>(create: (context) => AuthCubit(authRepository)),
+        BlocProvider<HomeCubit>(create: (context) => HomeCubit(homeRepository)..fetchDashboardData()),
+        BlocProvider<FlashcardCubit>(create: (context) => FlashcardCubit(flashcardRepository)),
+        BlocProvider<NoteCubit>(create: (context) => NoteCubit(noteRepository)..fetchNotes()),
       ],
       child: MaterialApp(
         title: 'Pamagi',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           primarySwatch: Colors.green,
-          scaffoldBackgroundColor: const Color(0xFF2C2C2C),
+          scaffoldBackgroundColor: const Color(0xFFF8F9FA),
         ),
-        initialRoute: '/',
+        initialRoute: initialRoute, // Gunakan hasil cek token di sini
         routes: {
           '/': (context) => LoginScreen(),
           '/register': (context) => const RegisterScreen(),

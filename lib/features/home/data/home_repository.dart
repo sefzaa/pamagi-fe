@@ -5,13 +5,22 @@ class HomeRepository {
 
   HomeRepository(this.apiClient);
 
+  Future<Map<String, dynamic>> getUserProfile() async {
+    try {
+      final response = await apiClient.dio.get('/users/me');
+      return response.data as Map<String, dynamic>;
+    } catch (e) {
+      throw Exception('Failed to load profile: $e');
+    }
+  }
+
   Future<List<dynamic>> getCategories({bool forDropdown = false}) async {
     try {
       final response = await apiClient.dio.get(
         '/categories',
         queryParameters: forDropdown ? {'for_dropdown': true} : null,
       );
-      return response.data as List<dynamic>;
+      return (response.data as List<dynamic>?) ?? [];
     } catch (e) {
       throw Exception('Failed to load categories: $e');
     }
@@ -20,7 +29,7 @@ class HomeRepository {
   Future<List<dynamic>> getWordTypes() async {
     try {
       final response = await apiClient.dio.get('/words/types');
-      return response.data as List<dynamic>;
+      return (response.data as List<dynamic>?) ?? [];
     } catch (e) {
       throw Exception('Failed to load word types: $e');
     }
@@ -30,26 +39,23 @@ class HomeRepository {
     String? categoryId,
     String? pos,
     bool? isFavorite,
-    bool? isBookmarked,
     String? startDate,
     String? endDate,
     String? sortBy,
+    String? search, // Tambahan parameter search
     int page = 1,
     int limit = 20,
   }) async {
     try {
-      final queryParams = <String, dynamic>{
-        'page': page,
-        'limit': limit,
-      };
+      final queryParams = <String, dynamic>{'page': page, 'limit': limit};
 
       if (categoryId != null && categoryId.isNotEmpty) queryParams['category_id'] = categoryId;
       if (pos != null && pos.isNotEmpty) queryParams['part_of_speech'] = pos;
       if (isFavorite != null) queryParams['is_favorite'] = isFavorite;
-      if (isBookmarked != null) queryParams['is_bookmarked'] = isBookmarked;
       if (startDate != null) queryParams['start_date'] = startDate;
       if (endDate != null) queryParams['end_date'] = endDate;
       if (sortBy != null) queryParams['sort_by'] = sortBy;
+      if (search != null && search.isNotEmpty) queryParams['search'] = search;
 
       final response = await apiClient.dio.get('/words', queryParameters: queryParams);
 
@@ -66,42 +72,22 @@ class HomeRepository {
   }
 
   Future<void> addCategory(String name, String icon) async {
-    try {
-      await apiClient.dio.post('/categories', data: {"name": name, "icon": icon});
-    } catch (e) {
-      throw Exception('Failed to add category: $e');
-    }
+    await apiClient.dio.post('/categories', data: {"name": name, "icon": icon});
   }
 
   Future<void> addWord(Map<String, dynamic> body) async {
-    try {
-      await apiClient.dio.post('/words', data: body);
-    } catch (e) {
-      throw Exception('Failed to save word: $e');
-    }
+    await apiClient.dio.post('/words', data: body);
   }
 
   Future<void> toggleFavorite(String wordId) async {
     await apiClient.dio.patch('/words/$wordId/favorite');
   }
 
-  Future<void> toggleBookmark(String wordId) async {
-    await apiClient.dio.patch('/words/$wordId/bookmark');
-  }
-
   Future<void> deleteWord(String id) async {
-    try {
-      await apiClient.dio.delete('/words/$id');
-    } catch (e) {
-      throw Exception('Failed to delete word: $e');
-    }
+    await apiClient.dio.delete('/words/$id');
   }
 
   Future<void> updateWord(String id, Map<String, dynamic> body) async {
-    try {
-      await apiClient.dio.put('/words/$id', data: body);
-    } catch (e) {
-      throw Exception('Failed to update word: $e');
-    }
+    await apiClient.dio.put('/words/$id', data: body);
   }
 }

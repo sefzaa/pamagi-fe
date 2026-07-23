@@ -7,6 +7,8 @@ import 'package:pamagi/features/home/presentation/word_list_screen.dart';
 import 'package:pamagi/features/home/presentation/library_screen.dart';
 import 'package:pamagi/features/flashcards/presentation/flashcard_screen.dart';
 import 'package:pamagi/features/notes/presentation/notes_screen.dart';
+import 'package:pamagi/features/profile/presentation/profile_screen.dart';
+
 
 class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
@@ -23,7 +25,7 @@ class _MainLayoutState extends State<MainLayout> {
     const FlashcardScreen(),
     const DashboardScreen(), // Dashboard Screen kita
     const NotesScreen(),
-    const Center(child: Text('Profile Screen')),
+    const ProfileScreen(),
   ];
 
   @override
@@ -35,7 +37,7 @@ class _MainLayoutState extends State<MainLayout> {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.favorite, color: Colors.red), // Icon Love
+          icon: const Icon(Icons.bookmark, color: Color(0xFF00AA5B)),
           onPressed: () {
             Navigator.push(
               context,

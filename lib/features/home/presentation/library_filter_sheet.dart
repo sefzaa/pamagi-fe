@@ -17,7 +17,6 @@ class _LibraryFilterSheetState extends State<LibraryFilterSheet> {
   List<String> selectedPos = [];
   String sortBy = 'newest';
   bool isFavorite = false;
-  bool isBookmarked = false;
 
   final List<String> posOptions = ['NOUN', 'VERB', 'ADJECTIVE', 'ADVERB', 'PRONOUN', 'PREPOSITION', 'CONJUNCTION', 'INTERJECTION', 'IDIOM'];
   final Map<String, String> sortOptions = {'newest': 'Newest First', 'oldest': 'Oldest First', 'a_z': 'A - Z', 'z_a': 'Z - A'};
@@ -32,14 +31,9 @@ class _LibraryFilterSheetState extends State<LibraryFilterSheet> {
   void _loadInitialFilters() {
     sortBy = widget.currentFilters['sort_by'] ?? 'newest';
     isFavorite = widget.currentFilters['is_favorite'] ?? false;
-    isBookmarked = widget.currentFilters['is_bookmarked'] ?? false;
 
-    if (widget.currentFilters['category_id'] != null) {
-      selectedCategories = widget.currentFilters['category_id'].toString().split(',');
-    }
-    if (widget.currentFilters['part_of_speech'] != null) {
-      selectedPos = widget.currentFilters['part_of_speech'].toString().split(',');
-    }
+    if (widget.currentFilters['category_id'] != null) selectedCategories = widget.currentFilters['category_id'].toString().split(',');
+    if (widget.currentFilters['part_of_speech'] != null) selectedPos = widget.currentFilters['part_of_speech'].toString().split(',');
   }
 
   Future<void> _fetchCategories() async {
@@ -48,13 +42,10 @@ class _LibraryFilterSheetState extends State<LibraryFilterSheet> {
   }
 
   void _applyFilters() {
-    final filters = <String, dynamic>{
-      'sort_by': sortBy,
-    };
+    final filters = <String, dynamic>{'sort_by': sortBy};
     if (selectedCategories.isNotEmpty) filters['category_id'] = selectedCategories.join(',');
     if (selectedPos.isNotEmpty) filters['part_of_speech'] = selectedPos.join(',');
     if (isFavorite) filters['is_favorite'] = true;
-    if (isBookmarked) filters['is_bookmarked'] = true;
 
     Navigator.pop(context, filters);
   }
@@ -93,18 +84,12 @@ class _LibraryFilterSheetState extends State<LibraryFilterSheet> {
                   ),
 
                   _buildSectionTitle('Status'),
-                  Row(
+                  Wrap(
                     children: [
                       FilterChip(
                         label: const Text('Favorite'), selected: isFavorite,
-                        selectedColor: Colors.red.shade100, checkmarkColor: Colors.red,
+                        selectedColor: const Color(0xFF00AA5B).withOpacity(0.2), checkmarkColor: const Color(0xFF00AA5B),
                         onSelected: (val) => setState(() => isFavorite = val),
-                      ),
-                      const SizedBox(width: 8),
-                      FilterChip(
-                        label: const Text('Bookmarked'), selected: isBookmarked,
-                        selectedColor: Colors.green.shade100, checkmarkColor: const Color(0xFF00AA5B),
-                        onSelected: (val) => setState(() => isBookmarked = val),
                       ),
                     ],
                   ),

@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pamagi/features/home/logic/home_cubit.dart';
 import 'package:pamagi/features/home/presentation/add_word_sheet.dart';
+import 'package:country_picker/country_picker.dart';
+
 
 class WordDetailScreen extends StatefulWidget {
   final Map<String, dynamic> word;
-
   const WordDetailScreen({super.key, required this.word});
 
   @override
@@ -27,9 +28,7 @@ class _WordDetailScreenState extends State<WordDetailScreen> {
       final DateTime d = DateTime.parse(dateStr.replaceFirst(' ', 'T'));
       final List<String> months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       return '${months[d.month - 1]} ${d.day.toString().padLeft(2, '0')}, ${d.year}';
-    } catch (e) {
-      return dateStr;
-    }
+    } catch (e) { return dateStr; }
   }
 
   void _confirmDelete() {
@@ -40,23 +39,19 @@ class _WordDetailScreenState extends State<WordDetailScreen> {
         content: const Text('This action cannot be undone.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () async {
-              Navigator.pop(ctx);
-              try {
-                await context.read<HomeCubit>().repository.deleteWord(currentWord['id']);
-                context.read<HomeCubit>().fetchDashboardData();
-                Navigator.pop(context);
-              } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-              }
-            },
-            child: const Text('Delete', style: TextStyle(color: Colors.white)),
-          ),
+          ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: Colors.red), onPressed: () async { Navigator.pop(ctx); try { await context.read<HomeCubit>().repository.deleteWord(currentWord['id']); context.read<HomeCubit>().fetchDashboardData(); Navigator.pop(context); } catch (e) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()))); } }, child: const Text('Delete', style: TextStyle(color: Colors.white))),
         ],
       ),
     );
+  }
+
+  String _getFlagEmoji(String code) {
+    try {
+      if (code.toUpperCase() == 'EN') return '🇬🇧';
+      return CountryParser.parseCountryCode(code.toUpperCase()).flagEmoji;
+    } catch (e) {
+      return '🌍';
+    }
   }
 
   @override
@@ -65,16 +60,13 @@ class _WordDetailScreenState extends State<WordDetailScreen> {
     final categories = currentWord['categories'] as List? ?? [];
     final targets = currentWord['targets'] as List? ?? [];
     final isFav = currentWord['is_favorite'] == true;
-    final isBook = currentWord['is_bookmarked'] == true;
     final repo = context.read<HomeCubit>().repository;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
         title: const Text('Word Detail', style: TextStyle(color: Color(0xFF00AA5B), fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
-        iconTheme: const IconThemeData(color: Color(0xFF00AA5B)),
-        elevation: 0,
+        backgroundColor: Colors.white, iconTheme: const IconThemeData(color: Color(0xFF00AA5B)), elevation: 0,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -83,51 +75,29 @@ class _WordDetailScreenState extends State<WordDetailScreen> {
           children: [
             Container(
               padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.grey.shade200),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
-              ),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.grey.shade200), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))]),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(color: const Color(0xFFE8F5E9), borderRadius: BorderRadius.circular(12)),
-                        child: Text(currentWord['part_of_speech'] ?? 'N/A', style: const TextStyle(color: Color(0xFF00AA5B), fontWeight: FontWeight.bold, fontSize: 12)),
+                      Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), decoration: BoxDecoration(color: const Color(0xFFE8F5E9), borderRadius: BorderRadius.circular(12)), child: Text(currentWord['part_of_speech'] ?? 'N/A', style: const TextStyle(color: Color(0xFF00AA5B), fontWeight: FontWeight.bold, fontSize: 12))),
+                      IconButton(
+                        icon: Icon(
+                            isFav ? Icons.bookmark : Icons.bookmark_border,
+                            color: isFav ? const Color(0xFF00AA5B) : Colors.grey
+                        ),
+                        onPressed: () {
+                          setState(() => currentWord['is_favorite'] = !isFav);
+                          repo.toggleFavorite(currentWord['id']); // <-- Logic Favorite
+                        },
                       ),
-                      Row(
-                        children: [
-                          IconButton(
-                            icon: Icon(isFav ? Icons.favorite : Icons.favorite_border, color: isFav ? Colors.red : const Color(0xFF00AA5B)),
-                            onPressed: () {
-                              setState(() => currentWord['is_favorite'] = !isFav);
-                              repo.toggleFavorite(currentWord['id']);
-                            },
-                          ),
-                          IconButton(
-                            icon: Icon(isBook ? Icons.bookmark : Icons.bookmark_border, color: const Color(0xFF00AA5B)),
-                            onPressed: () {
-                              setState(() => currentWord['is_bookmarked'] = !isBook);
-                              repo.toggleBookmark(currentWord['id']);
-                            },
-                          ),
-                        ],
-                      )
                     ],
                   ),
                   const SizedBox(height: 12),
-
-                  // NATIVE WORD
                   Text(currentWord['native_word'] ?? 'Unknown', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, fontFamily: 'serif')),
-
                   Divider(height: 32, color: Colors.grey.shade200),
-
-                  // TRANSLATION TARGETS
                   const Text('Translations:', style: TextStyle(color: Color(0xFF00AA5B), fontWeight: FontWeight.bold, fontSize: 16)),
                   const SizedBox(height: 8),
                   ...targets.map((t) => Padding(
@@ -135,12 +105,11 @@ class _WordDetailScreenState extends State<WordDetailScreen> {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('[${t['language_code']}] ', style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 16)),
+                        Text('${_getFlagEmoji(t['language_code'] ?? '')} [${t['language_code']}] ', style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 16)),
                         Expanded(child: Text(t['target_word'] ?? '', style: const TextStyle(color: Colors.black87, fontSize: 16))),
                       ],
                     ),
                   )).toList(),
-
                   const SizedBox(height: 24),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -148,28 +117,14 @@ class _WordDetailScreenState extends State<WordDetailScreen> {
                       Expanded(
                         child: Wrap(
                           spacing: 8, runSpacing: 8,
-                          children: categories.map((c) => Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            decoration: BoxDecoration(color: const Color(0xFFE8F5E9), borderRadius: BorderRadius.circular(16)),
-                            child: Text(c['name'], style: const TextStyle(color: Color(0xFF00AA5B), fontSize: 11, fontWeight: FontWeight.bold)),
-                          )).toList(),
+                          children: categories.map((c) => Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), decoration: BoxDecoration(color: const Color(0xFFE8F5E9), borderRadius: BorderRadius.circular(16)), child: Text(c['name'], style: const TextStyle(color: Color(0xFF00AA5B), fontSize: 11, fontWeight: FontWeight.bold)))).toList(),
                         ),
                       ),
                       IconButton(
                         icon: const Icon(Icons.edit, color: Color(0xFF00AA5B)),
                         onPressed: () async {
-                          final bool? isUpdated = await showModalBottomSheet(
-                            context: context,
-                            isScrollControlled: true,
-                            backgroundColor: Colors.transparent,
-                            builder: (_) => BlocProvider.value(
-                              value: context.read<HomeCubit>(),
-                              child: AddWordSheet(repository: repo, initialWord: currentWord),
-                            ),
-                          );
-                          if (isUpdated == true) {
-                            Navigator.pop(context);
-                          }
+                          final bool? isUpdated = await showModalBottomSheet(context: context, isScrollControlled: true, backgroundColor: Colors.transparent, builder: (_) => BlocProvider.value(value: context.read<HomeCubit>(), child: AddWordSheet(repository: repo, initialWord: currentWord)));
+                          if (isUpdated == true) Navigator.pop(context);
                         },
                       ),
                     ],
@@ -179,16 +134,13 @@ class _WordDetailScreenState extends State<WordDetailScreen> {
             ),
             const SizedBox(height: 24),
 
-            // EXAMPLES
             if (examples.isNotEmpty) ...[
               const Align(alignment: Alignment.centerLeft, child: Text('Example Sentences', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
               const SizedBox(height: 12),
               ...examples.map((ex) {
                 final exTargets = ex['target_sentences'] as List? ?? [];
                 return Container(
-                  width: double.infinity,
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(16),
+                  width: double.infinity, margin: const EdgeInsets.only(bottom: 12), padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(color: Colors.white, border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(12)),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -197,7 +149,7 @@ class _WordDetailScreenState extends State<WordDetailScreen> {
                       const SizedBox(height: 8),
                       ...exTargets.map((et) => Padding(
                         padding: const EdgeInsets.only(bottom: 4),
-                        child: Text('• [${et['language_code']}] "${et['sentence']}"', style: TextStyle(fontSize: 14, color: Colors.green.shade800, fontStyle: FontStyle.italic)),
+                        child: Text('• ${_getFlagEmoji(et['language_code'] ?? '')} [${et['language_code']}] "${et['sentence']}"', style: TextStyle(fontSize: 14, color: Colors.green.shade800, fontStyle: FontStyle.italic)),
                       )).toList(),
                     ],
                   ),
@@ -205,12 +157,7 @@ class _WordDetailScreenState extends State<WordDetailScreen> {
               }),
             ],
             const SizedBox(height: 32),
-
-            TextButton.icon(
-                onPressed: _confirmDelete,
-                icon: const Icon(Icons.delete_outline, color: Colors.red),
-                label: const Text('DELETE', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, letterSpacing: 1.2))
-            ),
+            TextButton.icon(onPressed: _confirmDelete, icon: const Icon(Icons.delete_outline, color: Colors.red), label: const Text('DELETE', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, letterSpacing: 1.2))),
             const SizedBox(height: 16),
             Text('Created: ${_formatDate(currentWord['created_at'])}', style: const TextStyle(color: Colors.grey, fontSize: 12)),
             const SizedBox(height: 24),
