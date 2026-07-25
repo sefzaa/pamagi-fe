@@ -45,6 +45,7 @@ class _AddWordSheetState extends State<AddWordSheet> {
   List<TargetInput> targets = [];
   List<ExampleInput> examples = [];
   bool isLoading = false;
+  String? _errorMessage;
   List<dynamic> userTargetLanguages = [];
 
   @override
@@ -280,10 +281,15 @@ class _AddWordSheetState extends State<AddWordSheet> {
   }
 
   Future<void> _submitWord() async {
-    setState(() => _isSubmitted = true);
+    setState(() {
+      _isSubmitted = true;
+      _errorMessage = null; // Reset error tiap kali tombol ditekan
+    });
 
     if (nativeWordController.text.isEmpty || targets.isEmpty || targets.first.word.text.isEmpty || selectedPos == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please fill in the required fields!'), backgroundColor: Colors.red));
+      setState(() {
+        _errorMessage = 'Please fill in all required fields!';
+      });
       return;
     }
 
@@ -476,6 +482,16 @@ class _AddWordSheetState extends State<AddWordSheet> {
               ),
             ),
             const SizedBox(height: 12),
+            if (_errorMessage != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Center(
+                  child: Text(
+                    _errorMessage!,
+                    style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                ),
+              ),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(

@@ -19,9 +19,17 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
 
-  // Mengecek token sebelum merender aplikasi
-  final token = await SecureStorageHelper.getAccessToken();
-  final String initialRoute = token != null ? '/home' : '/';
+  // BUNGKUS PENGECEKAN TOKEN DENGAN TRY-CATCH
+  String initialRoute = '/';
+  try {
+    final token = await SecureStorageHelper.getAccessToken();
+    if (token != null) {
+      initialRoute = '/home';
+    }
+  } catch (e) {
+    // Jika terjadi error sinkronisasi Keystore (biasanya karena reinstall), paksa ke halaman login
+    initialRoute = '/';
+  }
 
   final apiClient = ApiClient();
   final authRepository = AuthRepository(apiClient);
@@ -34,7 +42,7 @@ Future<void> main() async {
     homeRepository: homeRepository,
     flashcardRepository: flashcardRepository,
     noteRepository: noteRepository,
-    initialRoute: initialRoute, // Lempar route awal ke MyApp
+    initialRoute: initialRoute,
   ));
 }
 

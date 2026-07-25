@@ -5,7 +5,7 @@ import 'package:pamagi/features/home/presentation/add_word_sheet.dart';
 import 'package:pamagi/features/home/presentation/library_filter_sheet.dart';
 import 'package:pamagi/features/home/presentation/word_detail_screen.dart';
 import 'package:country_picker/country_picker.dart';
-import 'dart:async';
+
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
@@ -25,11 +25,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
   bool isLoading = false;
   bool hasMore = true;
 
-  Timer? _debounce;
+  String searchQuery = ''; // Variabel penampung teks pencarian lokal
 
   @override
   void dispose() {
-    _debounce?.cancel();
     _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
@@ -135,6 +134,14 @@ class _LibraryScreenState extends State<LibraryScreen> {
   Widget build(BuildContext context) {
     final repo = context.read<HomeCubit>().repository;
 
+    final displayedWords = words.where((w) {
+      if (searchQuery.isEmpty) return true;
+      final nw = (w['native_word'] ?? '').toString().toLowerCase();
+      final targets = w['targets'] as List? ?? [];
+      final tr = targets.map((t) => (t['target_word'] ?? '').toString().toLowerCase()).join(' ');
+      return nw.contains(searchQuery) || tr.contains(searchQuery);
+    }).toList();
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
@@ -146,28 +153,20 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 Expanded(
                   child: TextField(
                     controller: _searchController,
-                    onChanged: (value) {
-                      setState(() {}); // Memperbarui UI agar ikon 'X' bisa muncul
-
-                      // Membatalkan hitungan sebelumnya jika user masih mengetik
-                      if (_debounce?.isActive ?? false) _debounce!.cancel();
-
-                      // Memulai hitungan mundur 2.5 detik (2500 milidetik)
-                      _debounce = Timer(const Duration(milliseconds: 2500), () {
-                        _fetchWords(refresh: true);
+                    onChanged: (val) {
+                      setState(() {
+                        searchQuery = val.toLowerCase();
                       });
                     },
                     decoration: InputDecoration(
                       hintText: 'Search words...',
                       prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                      suffixIcon: _searchController.text.isNotEmpty
+                      suffixIcon: searchQuery.isNotEmpty
                           ? IconButton(
                           icon: const Icon(Icons.clear, color: Colors.grey),
                           onPressed: () {
                             _searchController.clear();
-                            setState(() {}); // Hilangkan ikon 'X'
-                            if (_debounce?.isActive ?? false) _debounce!.cancel();
-                            _fetchWords(refresh: true);
+                            setState(() => searchQuery = '');
                           }
                       )
                           : null,
@@ -196,18 +195,18 @@ class _LibraryScreenState extends State<LibraryScreen> {
             child: RefreshIndicator(
               color: const Color(0xFF00AA5B),
               onRefresh: () => _fetchWords(refresh: true),
-              child: words.isEmpty && !isLoading
+              child: displayedWords.isEmpty && !isLoading
                   ? const Center(child: Text('No words found.', style: TextStyle(color: Colors.grey)))
                   : ListView.separated(
                 controller: _scrollController,
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                itemCount: words.length + (hasMore ? 1 : 0),
+                itemCount: displayedWords.length + (hasMore ? 1 : 0),
                 separatorBuilder: (_, __) => Divider(color: Colors.grey.shade200),
                 itemBuilder: (context, index) {
-                  if (index == words.length) return const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator(color: Color(0xFF00AA5B))));
+                  if (index == displayedWords.length) return const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator(color: Color(0xFF00AA5B))));
 
-                  final word = words[index];
+                  final word = displayedWords[index];
                   final isFav = word['is_favorite'] == true;
                   final targets = word['targets'] as List? ?? [];
 

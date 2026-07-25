@@ -11,6 +11,7 @@ import 'package:pamagi/features/flashcards/presentation/flashcard_quiz_screen.da
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:country_picker/country_picker.dart';
 import 'package:pamagi/features/home/presentation/word_detail_screen.dart';
+import 'package:pamagi/core/secure_storage_helper.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -40,7 +41,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return BlocBuilder<HomeCubit, HomeState>(
       builder: (context, state) {
         if (state is HomeLoading) return const Center(child: CircularProgressIndicator(color: Color(0xFF00AA5B)));
-        if (state is HomeError) return Center(child: Text('Error: ${state.message}', style: const TextStyle(color: Colors.red)));
+        if (state is HomeError) {
+          final msg = state.message.toLowerCase();
+          // Jika error berkaitan dengan sesi atau token, langsung tendang ke Login
+          if (msg.contains('expired') || msg.contains('unauthorized') || msg.contains('unauthenticated')) {
+            WidgetsBinding.instance.addPostFrameCallback((_) async {
+              await SecureStorageHelper.clearTokens();
+              if (context.mounted) {
+                Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+              }
+            });
+            return const Center(child: CircularProgressIndicator(color: Color(0xFF00AA5B)));
+          }
+
+          return Center(child: Text('Error: ${state.message}', style: const TextStyle(color: Colors.red)));
+        }
         if (state is HomeLoaded) {
           final slogan = state.userProfile['slogan'] ?? 'Consistency is key to fluency.';
 
