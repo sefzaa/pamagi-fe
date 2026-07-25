@@ -100,7 +100,21 @@ class _LoginScreenState extends State<LoginScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
-                      onPressed: state is AuthLoading ? null : () => context.read<AuthCubit>().loginUser(identifierController.text, passwordController.text),
+                      onPressed: state is AuthLoading ? null : () {
+                        final identifier = identifierController.text.trim();
+                        final password = passwordController.text;
+
+                        if (identifier.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Username/Email is required.'), backgroundColor: Colors.red));
+                          return;
+                        }
+                        if (password.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password is required.'), backgroundColor: Colors.red));
+                          return;
+                        }
+
+                        context.read<AuthCubit>().loginUser(identifier, password);
+                      },
                       child: state is AuthLoading
                           ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                           : const Text('Login', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),

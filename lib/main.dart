@@ -67,9 +67,26 @@ class MyApp extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider<AuthCubit>(create: (context) => AuthCubit(authRepository)),
-        BlocProvider<HomeCubit>(create: (context) => HomeCubit(homeRepository)..fetchDashboardData()),
+
+        // PENCEGAHAN ERROR: Hanya ambil data Home jika user masuk ke /home
+        BlocProvider<HomeCubit>(create: (context) {
+          final cubit = HomeCubit(homeRepository);
+          if (initialRoute == '/home') {
+            cubit.fetchDashboardData();
+          }
+          return cubit;
+        }),
+
         BlocProvider<FlashcardCubit>(create: (context) => FlashcardCubit(flashcardRepository)),
-        BlocProvider<NoteCubit>(create: (context) => NoteCubit(noteRepository)..fetchNotes()),
+
+        // PENCEGAHAN ERROR: Hanya ambil data Notes jika user masuk ke /home
+        BlocProvider<NoteCubit>(create: (context) {
+          final cubit = NoteCubit(noteRepository);
+          if (initialRoute == '/home') {
+            cubit.fetchNotes();
+          }
+          return cubit;
+        }),
       ],
       child: MaterialApp(
         title: 'Pamagi',
@@ -80,7 +97,7 @@ class MyApp extends StatelessWidget {
         ),
         initialRoute: initialRoute, // Gunakan hasil cek token di sini
         routes: {
-          '/': (context) => LoginScreen(),
+          '/': (context) => const LoginScreen(),
           '/register': (context) => const RegisterScreen(),
           '/home': (context) => const MainLayout(),
         },

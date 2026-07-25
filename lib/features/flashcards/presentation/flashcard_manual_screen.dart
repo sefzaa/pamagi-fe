@@ -132,11 +132,17 @@ class _FlashcardManualScreenState extends State<FlashcardManualScreen> {
                 final isSelected = selectedWordIds.contains(word['id']);
 
                 final targets = word['targets'] as List? ?? [];
-                final translationStr = targets.map((t) => '${_getFlagEmoji(t['language_code'] ?? '')} ${t['target_word']}').join('  •  ');
+                final translationStr = targets.map((t) {
+                  final tw = (t['target_word'] == null || t['target_word'].toString().trim().isEmpty) ? '-' : t['target_word'];
+                  return '${_getFlagEmoji(t['language_code'] ?? '')} $tw';
+                }).join('  •  ');
 
                 return CheckboxListTile(
                   activeColor: const Color(0xFF00AA5B),
-                  title: Text(word['native_word'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  title: Text(
+                      (word['native_word'] == null || word['native_word'].toString().trim().isEmpty) ? '-' : word['native_word'],
+                      style: const TextStyle(fontWeight: FontWeight.bold)
+                  ),
                   subtitle: Text(translationStr),
                   value: isSelected,
                   onChanged: (bool? val) {

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pamagi/core/api_client.dart';
 import 'package:pamagi/core/secure_storage_helper.dart';
-import 'package:dio/dio.dart';
+import 'package:pamagi/features/auth/data/auth_repository.dart';
+import 'package:pamagi/features/auth/logic/auth_cubit.dart';
+import 'package:pamagi/features/auth/presentation/edit_profile_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -39,14 +42,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _logout() async {
     try {
       final apiClient = ApiClient();
-      await apiClient.dio.post('/logout'); // Menghapus sesi di backend Redis
+      await apiClient.dio.post('/logout');
     } catch (e) {
-      // Abaikan error backend, tetap hapus sesi lokal
+      // Abaikan error backend
     } finally {
-      await SecureStorageHelper.clearTokens(); // Hapus token lokal
+      await SecureStorageHelper.clearTokens();
       if (mounted) {
         Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
       }
+    }
+  }
+
+  void _openEditProfile() async {
+    if (profileData == null) return;
+    final authRepo = AuthRepository(ApiClient());
+    final isUpdated = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BlocProvider(
+          create: (context) => AuthCubit(authRepo),
+          child: EditProfileScreen(profileData: profileData!),
+        ),
+      ),
+    );
+    if (isUpdated == true) {
+      _fetchProfile();
     }
   }
 
@@ -70,14 +90,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
+      // APPBAR DIHAPUS agar tidak ada double header
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            const CircleAvatar(
-              radius: 50,
-              backgroundColor: Color(0xFFE8F5E9),
-              child: Icon(Icons.person, size: 50, color: Color(0xFF00AA5B)),
+            const SizedBox(height: 12),
+            // LINGKARAN PROFILE DENGAN BADGE ICON EDIT
+            GestureDetector(
+              onTap: _openEditProfile,
+              child: Stack(
+                children: [
+                  const CircleAvatar(
+                    radius: 50,
+                    backgroundColor: Color(0xFFE8F5E9),
+                    child: Icon(Icons.person, size: 50, color: Color(0xFF00AA5B)),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF00AA5B),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.edit, size: 16, color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 16),
             Text(profileData!['name'] ?? 'No Name', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),

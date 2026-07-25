@@ -180,24 +180,49 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
                       onPressed: state is AuthLoading ? null : () {
+                        // 1. Ambil semua teks
+                        final name = nameController.text.trim();
+                        final username = usernameController.text.trim();
+                        final email = emailController.text.trim();
+                        final password = passwordController.text;
+
+                        // 2. Validasi berurutan dari atas ke bawah secara lokal
+                        if (name.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Name is required.'), backgroundColor: Colors.red));
+                          return;
+                        }
+                        if (username.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Username is required.'), backgroundColor: Colors.red));
+                          return;
+                        }
+                        if (email.isEmpty || !email.contains('@')) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Valid email is required.'), backgroundColor: Colors.red));
+                          return;
+                        }
+                        if (password.length < 6) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password must be at least 6 characters.'), backgroundColor: Colors.red));
+                          return;
+                        }
                         if (nativeLanguageCode == null) {
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select your native language!')));
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select your native language.'), backgroundColor: Colors.red));
                           return;
                         }
                         if (targetLanguages.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select at least 1 target language!')));
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select at least 1 target language.'), backgroundColor: Colors.red));
                           return;
                         }
+
+                        // 3. Jika semua lulus, baru kirim ke backend
                         final body = {
-                          "name": nameController.text,
-                          "username": usernameController.text,
-                          "email": emailController.text,
-                          "password": passwordController.text,
-                          "no_wa": noWaController.text,
+                          "name": name,
+                          "username": username,
+                          "email": email,
+                          "password": password,
+                          "no_wa": noWaController.text.trim(),
                           "native_language": nativeLanguageCode,
                           "native_flag_icon": nativeFlagIcon,
                           "target_languages": targetLanguages,
-                          "slogan": sloganController.text,
+                          "slogan": sloganController.text.trim(),
                         };
                         context.read<AuthCubit>().registerUser(body);
                       },

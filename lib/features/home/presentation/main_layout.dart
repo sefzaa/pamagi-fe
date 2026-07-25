@@ -7,7 +7,7 @@ import 'package:pamagi/features/home/presentation/word_list_screen.dart';
 import 'package:pamagi/features/home/presentation/library_screen.dart';
 import 'package:pamagi/features/flashcards/presentation/flashcard_screen.dart';
 import 'package:pamagi/features/notes/presentation/notes_screen.dart';
-import 'package:pamagi/features/profile/presentation/profile_screen.dart';
+import 'package:pamagi/features/auth/presentation/profile_screen.dart';
 
 
 class MainLayout extends StatefulWidget {

@@ -18,7 +18,7 @@ class _LibraryFilterSheetState extends State<LibraryFilterSheet> {
   String sortBy = 'newest';
   bool isFavorite = false;
 
-  final List<String> posOptions = ['NOUN', 'VERB', 'ADJECTIVE', 'ADVERB', 'PRONOUN', 'PREPOSITION', 'CONJUNCTION', 'INTERJECTION', 'IDIOM'];
+  final List<String> posOptions = ['NOUN', 'VERB', 'ADJECTIVE', 'ADVERB', 'PRONOUN', 'PREPOSITION', 'CONJUNCTION', 'INTERJECTION', 'IDIOM', 'NONE'];
   final Map<String, String> sortOptions = {'newest': 'Newest First', 'oldest': 'Oldest First', 'a_z': 'A - Z', 'z_a': 'Z - A'};
 
   @override

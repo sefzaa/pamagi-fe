@@ -224,7 +224,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
                               children: [
                                 Row(
                                   children: [
-                                    Text(word['native_word'] ?? 'Unknown', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF00AA5B))),
+                                    Text(
+                                        (word['native_word'] == null || word['native_word'].toString().trim().isEmpty)
+                                            ? '-'
+                                            : word['native_word'],
+                                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF00AA5B))
+                                    ),
                                     const SizedBox(width: 8),
                                     Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(4)), child: Text(word['part_of_speech'] ?? 'N/A', style: const TextStyle(fontSize: 10, color: Colors.grey))),
                                   ],
@@ -235,7 +240,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
                                     : Wrap(spacing: 12, children: targets.map((t) {
                                   final code = t['language_code'] ?? '';
                                   final flag = _getFlagEmoji(code);
-                                  return Row(mainAxisSize: MainAxisSize.min, children: [Text(flag, style: const TextStyle(fontSize: 14)), const SizedBox(width: 4), Text(t['target_word'] ?? '', style: TextStyle(color: Colors.grey.shade700, fontSize: 13))]);
+                                  return Row(mainAxisSize: MainAxisSize.min, children: [Text(flag, style: const TextStyle(fontSize: 14)), const SizedBox(width: 4),
+                                    Text(
+                                        (t['target_word'] == null || t['target_word'].toString().trim().isEmpty)
+                                            ? '-'
+                                            : t['target_word'],
+                                        style: TextStyle(color: Colors.grey.shade700, fontSize: 13)
+                                    )]);
                                 }).toList()),
                               ],
                             ),

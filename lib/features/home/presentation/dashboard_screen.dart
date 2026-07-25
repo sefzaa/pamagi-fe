@@ -4,7 +4,6 @@ import 'package:pamagi/features/home/logic/home_cubit.dart';
 import 'package:pamagi/features/home/logic/home_state.dart';
 import 'package:pamagi/features/home/presentation/add_word_sheet.dart';
 import 'package:pamagi/features/home/presentation/word_list_screen.dart';
-import 'package:pamagi/features/flashcards/presentation/flashcard_screen.dart';
 import 'package:pamagi/features/flashcards/logic/flashcard_cubit.dart';
 import 'package:pamagi/features/flashcards/presentation/flashcard_setup_sheet.dart';
 import 'package:pamagi/features/flashcards/presentation/flashcard_quiz_screen.dart';
@@ -12,6 +11,7 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:country_picker/country_picker.dart';
 import 'package:pamagi/features/home/presentation/word_detail_screen.dart';
 import 'package:pamagi/core/secure_storage_helper.dart';
+import 'package:pamagi/features/home/presentation/group_list_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -118,7 +118,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    Center(child: TextButton(onPressed: () {}, child: const Text('VIEW ALL', style: TextStyle(color: Color(0xFF00AA5B), fontSize: 12, fontWeight: FontWeight.bold)))),
+                    Center(
+                      child: TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => BlocProvider.value(
+                                value: context.read<HomeCubit>(),
+                                child: GroupListScreen(isCategory: isCategoryTab),
+                              ),
+                            ),
+                          );
+                        },
+                        child: const Text('VIEW ALL', style: TextStyle(color: Color(0xFF00AA5B), fontSize: 12, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
                     const SizedBox(height: 24),
                     const Text('Recent Words', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 16),
@@ -273,7 +288,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 children: [
                   Row(
                     children: [
-                      Text(word['native_word'] ?? 'Unknown', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF00AA5B))),
+                      Text(
+                          (word['native_word'] == null || word['native_word'].toString().trim().isEmpty)
+                              ? '-'
+                              : word['native_word'],
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF00AA5B))
+                      ),
                       const SizedBox(width: 8),
                       Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(4)), child: Text(word['part_of_speech'] ?? 'N/A', style: const TextStyle(fontSize: 10, color: Colors.grey))),
                     ],
@@ -284,7 +304,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       : Wrap(spacing: 12, children: targets.map((t) {
                     final code = t['language_code'] ?? '';
                     final flag = _getFlagEmoji(code);
-                    return Row(mainAxisSize: MainAxisSize.min, children: [Text(flag, style: const TextStyle(fontSize: 14)), const SizedBox(width: 4), Text(t['target_word'] ?? '', style: TextStyle(color: Colors.grey.shade700, fontSize: 13))]);
+                    return Row(mainAxisSize: MainAxisSize.min, children: [Text(flag, style: const TextStyle(fontSize: 14)), const SizedBox(width: 4),
+                      Text(
+                          (t['target_word'] == null || t['target_word'].toString().trim().isEmpty)
+                              ? '-'
+                              : t['target_word'],
+                          style: TextStyle(color: Colors.grey.shade700, fontSize: 13)
+                      )]);
                   }).toList(),
                   ),
                 ],

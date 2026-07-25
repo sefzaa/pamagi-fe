@@ -283,12 +283,16 @@ class _AddWordSheetState extends State<AddWordSheet> {
   Future<void> _submitWord() async {
     setState(() {
       _isSubmitted = true;
-      _errorMessage = null; // Reset error tiap kali tombol ditekan
+      _errorMessage = null;
     });
 
-    if (nativeWordController.text.isEmpty || targets.isEmpty || targets.first.word.text.isEmpty || selectedPos == null) {
+    // Validasi: Minimal 1 kata harus diisi (Native ATAU salah satu Target)
+    bool hasAtLeastOneWord = nativeWordController.text.trim().isNotEmpty ||
+        targets.any((t) => t.word.text.trim().isNotEmpty);
+
+    if (!hasAtLeastOneWord) {
       setState(() {
-        _errorMessage = 'Please fill in all required fields!';
+        _errorMessage = 'Please fill in at least one word (Native or Target)!';
       });
       return;
     }
@@ -296,12 +300,12 @@ class _AddWordSheetState extends State<AddWordSheet> {
     setState(() => isLoading = true);
     try {
       final body = {
-        "native_word": nativeWordController.text,
-        "part_of_speech": selectedPos,
+        "native_word": nativeWordController.text.trim(), // Jika kosong akan dikirim ""
+        "part_of_speech": selectedPos ?? "NONE", // Default ke NONE jika tidak dipilih
         "category_ids": selectedCategoryIds,
-        "targets": targets.where((t) => t.word.text.isNotEmpty && t.langCode.isNotEmpty).map((t) => {
+        "targets": targets.map((t) => {
           "language_code": t.langCode,
-          "target_word": t.word.text,
+          "target_word": t.word.text.trim(), // Dikirim semua, meskipun isinya ""
         }).toList(),
         "examples": examples.where((e) => e.nativeSentence.text.isNotEmpty).map((e) => {
           "native_sentence": e.nativeSentence.text,

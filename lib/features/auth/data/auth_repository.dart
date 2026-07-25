@@ -21,11 +21,11 @@ class AuthRepository {
         data['user']['subscription_status'] ?? 'FREE',
       );
     } on DioException catch (e) {
-      if (e.response != null) {
-        throw Exception(e.response?.data.toString() ?? 'Invalid credentials!');
-      } else {
-        throw Exception('Connection failed: ${e.message}');
+      String errorMessage = 'Invalid credentials!';
+      if (e.response?.data != null && e.response?.data is Map) {
+        errorMessage = e.response?.data['message'] ?? errorMessage;
       }
+      throw Exception(errorMessage);
     } catch (e) {
       throw Exception('An error occurred: $e');
     }
@@ -42,11 +42,25 @@ class AuthRepository {
         data['user']['subscription_status'] ?? 'FREE',
       );
     } on DioException catch (e) {
-      if (e.response != null) {
-        throw Exception(e.response?.data.toString() ?? 'Registration failed, please check your input!');
-      } else {
-        throw Exception('No connection to the server');
+      String errorMessage = 'Registration failed, please check your input!';
+      if (e.response?.data != null && e.response?.data is Map) {
+        errorMessage = e.response?.data['message'] ?? errorMessage;
       }
+      throw Exception(errorMessage);
+    } catch (e) {
+      throw Exception('An error occurred: $e');
+    }
+  }
+
+  Future<void> updateProfile(Map<String, dynamic> requestBody) async {
+    try {
+      await apiClient.dio.put('/users/me', data: requestBody);
+    } on DioException catch (e) {
+      String errorMessage = 'Registration failed, please check your input!';
+      if (e.response?.data != null && e.response?.data is Map) {
+        errorMessage = e.response?.data['message'] ?? errorMessage;
+      }
+      throw Exception(errorMessage);
     } catch (e) {
       throw Exception('An error occurred: $e');
     }

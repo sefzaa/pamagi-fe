@@ -184,12 +184,19 @@ class _FlashcardQuizScreenState extends State<FlashcardQuizScreen> {
             children: [
               const Text('Word Info', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF00AA5B))),
               const SizedBox(height: 16),
-              Text(word['native_word'] ?? '', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              Text(
+                  (word['native_word'] == null || word['native_word'].toString().trim().isEmpty) ? '-' : word['native_word'],
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)
+              ),
 
               const SizedBox(height: 8),
               ...targets.map((t) => Padding(
                 padding: const EdgeInsets.only(bottom: 4),
-                child: Text('${_getFlagEmoji(t['language_code'] ?? '')} ${t['target_word'] ?? ''}', style: const TextStyle(fontSize: 16, color: Colors.grey)),
+                child:
+                Text(
+                    '${_getFlagEmoji(t['language_code'] ?? '')} ${(t['target_word'] == null || t['target_word'].toString().trim().isEmpty) ? '-' : t['target_word']}',
+                    style: const TextStyle(fontSize: 16, color: Colors.grey)
+                ),
               )).toList(),
 
               const SizedBox(height: 24),
@@ -225,8 +232,13 @@ class _FlashcardQuizScreenState extends State<FlashcardQuizScreen> {
     if (mode == 'Random') showNativeFront = (word['id'].hashCode + currentIndex) % 2 == 0;
 
     final targets = word['targets'] as List? ?? [];
-    final targetCombinedText = targets.map((t) => '${_getFlagEmoji(t['language_code'] ?? '')} ${t['target_word']}').join('\n');
-    final nativeText = word['native_word'] ?? '';
+    final targetCombinedText = targets.map((t) {
+      final tw = (t['target_word'] == null || t['target_word'].toString().trim().isEmpty) ? '-' : t['target_word'];
+      return '${_getFlagEmoji(t['language_code'] ?? '')} $tw';
+    }).join('\n');
+    final nativeText = (word['native_word'] == null || word['native_word'].toString().trim().isEmpty)
+        ? '-'
+        : word['native_word'];
 
     final frontText = showNativeFront ? nativeText : targetCombinedText;
     final backText = showNativeFront ? targetCombinedText : nativeText;

@@ -90,4 +90,12 @@ class HomeRepository {
   Future<void> updateWord(String id, Map<String, dynamic> body) async {
     await apiClient.dio.put('/words/$id', data: body);
   }
+
+  Future<void> updateCategory(String id, String name, String icon) async {
+    await apiClient.dio.put('/categories/$id', data: {"name": name, "icon": icon});
+  }
+
+  Future<void> deleteCategory(String id) async {
+    await apiClient.dio.delete('/categories/$id');
+  }
 }
