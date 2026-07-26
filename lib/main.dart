@@ -89,7 +89,7 @@ class MyApp extends StatelessWidget {
         }),
       ],
       child: MaterialApp(
-        title: 'Pamagi',
+        title: 'LinguaFlip', // Ubah di sini
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           primarySwatch: Colors.green,

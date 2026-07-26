@@ -51,7 +51,7 @@ class _MainLayoutState extends State<MainLayout> {
             );
           },
         ),
-        title: const Text('PAMAGI', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF00AA5B), letterSpacing: 1.5)),
+        title: const Text('LinguaFlip', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF00AA5B), letterSpacing: 1.5)),
         centerTitle: true,
         actions: [
           IconButton(
