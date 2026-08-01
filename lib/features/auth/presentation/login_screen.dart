@@ -71,7 +71,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       children: [
                         const Text('Password', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00AA5B))),
                         TextButton(
-                          onPressed: () {},
+                          onPressed: () {
+                            Navigator.pushNamed(context, '/forgot-password');
+                          },
                           style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: Size.zero),
                           child: const Text('Forgot Password?', style: TextStyle(color: Colors.grey, fontSize: 12)),
                         )

@@ -65,4 +65,57 @@ class AuthRepository {
       throw Exception('An error occurred: $e');
     }
   }
+
+  // --- FORGOT PASSWORD FLOW ---
+
+  Future<void> requestForgotPasswordOTP(String email) async {
+    try {
+      await apiClient.dio.post('/forgot-password', data: {"email": email});
+    } on DioException catch (e) {
+      String errorMessage = 'Gagal mengirim OTP.';
+      if (e.response?.data != null && e.response?.data is Map) {
+        errorMessage = e.response?.data['message'] ?? errorMessage;
+      }
+      throw Exception(errorMessage);
+    } catch (e) {
+      throw Exception('Terjadi kesalahan: $e');
+    }
+  }
+
+  Future<String> verifyOTP(String email, String otp) async {
+    try {
+      final response = await apiClient.dio.post('/verify-otp', data: {
+        "email": email,
+        "otp": otp,
+      });
+      // Mengambil reset_token dari balasan backend
+      return response.data['reset_token'];
+    } on DioException catch (e) {
+      String errorMessage = 'OTP tidak valid atau kedaluwarsa.';
+      if (e.response?.data != null && e.response?.data is Map) {
+        errorMessage = e.response?.data['message'] ?? errorMessage;
+      }
+      throw Exception(errorMessage);
+    } catch (e) {
+      throw Exception('Terjadi kesalahan: $e');
+    }
+  }
+
+  Future<void> resetPassword(String email, String resetToken, String newPassword) async {
+    try {
+      await apiClient.dio.post('/reset-password', data: {
+        "email": email,
+        "reset_token": resetToken,
+        "new_password": newPassword,
+      });
+    } on DioException catch (e) {
+      String errorMessage = 'Gagal mereset password.';
+      if (e.response?.data != null && e.response?.data is Map) {
+        errorMessage = e.response?.data['message'] ?? errorMessage;
+      }
+      throw Exception(errorMessage);
+    } catch (e) {
+      throw Exception('Terjadi kesalahan: $e');
+    }
+  }
 }

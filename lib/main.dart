@@ -14,6 +14,7 @@ import 'package:pamagi/features/flashcards/data/flashcard_repository.dart';
 import 'package:pamagi/features/flashcards/logic/flashcard_cubit.dart';
 import 'package:pamagi/features/notes/data/note_repository.dart';
 import 'package:pamagi/features/notes/logic/note_cubit.dart';
+import 'package:pamagi/features/auth/presentation/forgot_password_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -100,8 +101,10 @@ class MyApp extends StatelessWidget {
           '/': (context) => const LoginScreen(),
           '/register': (context) => const RegisterScreen(),
           '/home': (context) => const MainLayout(),
+          '/forgot-password': (context) => const ForgotPasswordScreen(),
         },
       ),
     );
   }
+
 }
